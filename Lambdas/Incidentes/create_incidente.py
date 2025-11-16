@@ -77,7 +77,7 @@ def lambda_handler(event, context):
         lambda_client = boto3.client('lambda')
         
         lambda_client.invoke(
-            FunctionName='notify_handler',
+            FunctionName='alerta-utec-dev-notifyHandler',
             InvocationType='Event',
             Payload=json.dumps({
                 'action': 'new_incident',
@@ -95,7 +95,6 @@ def lambda_handler(event, context):
     
     except Exception as e:
         print(f"Error invocando notificación: {str(e)}")
-        return response(500, str(e))
         
     return response(200, {
         'codigo_incidente': codigo_incidente,
