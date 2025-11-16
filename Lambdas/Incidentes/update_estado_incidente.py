@@ -13,30 +13,23 @@ SNS_TOPIC = os.environ.get('SNS_TOPIC')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 VALID_STATES = ['pendiente', 'en_proceso', 'resuelto']
 
-def validate_token(event):
-    auth = event['headers'].get('Authorization')
-    if not auth or not auth.startswith('Bearer '):
-        return None
-    token = auth.split(' ')[1]
-    try:
-        return jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-    except Exception:
-        return None
 
 def lambda_handler(event, context):
     try:
-        claims = validate_token(event)
-        if not claims or claims.get('role') != 'autoridad':
-            return response(403, "No autorizado")
+        
         body = json.loads(event.get('body', '{}'))
         codigo_incidente = body.get('codigo_incidente')
         nuevo_estado = body.get('estado')
+        
         if not codigo_incidente or nuevo_estado not in VALID_STATES:
             return response(400, "Datos inválidos")
+            
         table = dynamodb.Table(INCIDENTES_TABLE)
         incidente = table.get_item(Key={'codigo_incidente': codigo_incidente}).get('Item')
+        
         if not incidente:
             return response(404, "Incidente no encontrado")
+            
         table.update_item(
             Key={'codigo_incidente': codigo_incidente},
             UpdateExpression='SET estado = :e',
@@ -53,6 +46,7 @@ def lambda_handler(event, context):
             'detalles': f'Estado actualizado a {nuevo_estado}'
         }
         dynamodb.Table(HISTORIAL_TABLE).put_item(Item=historial)
+        
         sns.publish(TopicArn=SNS_TOPIC, Message=json.dumps({
             'evento': 'estado_actualizado',
             'codigo_incidente': codigo_incidente,
