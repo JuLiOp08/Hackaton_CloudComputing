@@ -7,9 +7,9 @@
 	"variable": [
 		{
 			"key": "base_url",
-			"value": "https://tu-api-gateway.execute-api.us-east-1.amazonaws.com/dev",
+			"value": "https://syegaqrsf8.execute-api.us-east-1.amazonaws.com/dev",
 			"type": "string"
-		}
+		},
 	],
 	"item": [
 		{

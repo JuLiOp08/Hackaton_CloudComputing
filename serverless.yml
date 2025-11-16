@@ -28,6 +28,14 @@ functions:
           method: post
           cors: true
 
+  test_basic:
+    handler: Lambdas/Auth/test_basic.lambda_handler
+    events:
+      - http:
+          path: /test/basic
+          method: get
+          cors: true
+
   login_user:
     handler: Lambdas/Auth/login_user.lambda_handler
     events:

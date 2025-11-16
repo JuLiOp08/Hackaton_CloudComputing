@@ -2,19 +2,40 @@ import json
 import jwt
 import os
 
-JWT_SECRET = os.environ["JWT_SECRET"]
+JWT_SECRET = os.environ.get("JWT_SECRET", "alerta-utec-secret-key-2024")
 
 def lambda_handler(event, context):
-    token = event["headers"].get("Authorization", "")
-    token = token.replace("Bearer ", "")
-
-    if not token:
-        return deny("Token no proporcionado")
-
     try:
+        headers = event.get("headers", {})
+        # Manejar tanto Authorization como authorization (case-insensitive)
+        auth_header = headers.get("Authorization") or headers.get("authorization", "")
+        token = auth_header.replace("Bearer ", "").replace("bearer ", "")
+
+        if not token:
+            return deny("Token no proporcionado")
+        
         decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
         
-        return allow(decoded["userId"], decoded, event["methodArn"])
+        # Crear política IAM que permite el acceso
+        policy = {
+            "principalId": decoded["userId"],
+            "policyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Action": "execute-api:Invoke",
+                        "Effect": "Allow",
+                        "Resource": event.get("methodArn", "*")
+                    }
+                ]
+            },
+            "context": {
+                "userId": str(decoded["userId"]),
+                "email": str(decoded["email"]),
+                "role": str(decoded["role"])
+            }
+        }
+        return policy
         
     except jwt.ExpiredSignatureError:
         return deny("Token expirado")
@@ -22,13 +43,6 @@ def lambda_handler(event, context):
         return deny(f"Token inválido: {str(e)}")
     except Exception as e:
         return deny(f"Error validando token: {str(e)}")
-
-def allow(principal_id, context, method_arn):
-    """Retornar política IAM que PERMITE el acceso"""
-    return {
-        "principalId": principal_id,
-        "context": context
-    }
 
 def deny(message):
     """Retornar política IAM que DENIEGA el acceso"""
