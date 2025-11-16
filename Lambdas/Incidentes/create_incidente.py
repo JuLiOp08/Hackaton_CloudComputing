@@ -26,8 +26,9 @@ SNS_TOPIC = os.environ.get('SNS_TOPIC')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 
 VALID_TYPES = [
-    "Fuga de agua", "Piso mojado", "Daño en utilería de salón", "Daño infraestructura", "Objeto perdido", "Emergencia médica", "Baño dañado"
+    "Fuga de agua", "Fuga de gas", "Piso mojado", "Daño de utilería", "Daño infraestructura", "Objeto perdido", "Emergencia médica", "Baño dañado", "Incendio"
 ]
+VALID_PLACES = ["aula", "cocina", "biblioteca", "laboratorio", "comedor", "cancha", "baños"]
 
 def lambda_handler(event, context):
     try:
