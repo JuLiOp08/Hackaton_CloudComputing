@@ -1,6 +1,7 @@
 import json
 import boto3
 import os
+import asyncio
 from datetime import datetime
 
 dynamodb = boto3.resource('dynamodb')
@@ -8,17 +9,15 @@ CONNECTIONS_TABLE = os.environ.get('CONNECTIONS_TABLE', 'websocket-connections')
 
 def handler(event, context):
     """Lambda que recibe notificaciones y las envía via WebSocket"""
-    print("🔔 Procesando notificación")
+    print("Procesando notificación")
     
     try:
-        message = event
-        
-        await broadcast_to_subscribers(message)
+        asyncio.run(broadcast_to_subscribers(event))
         
         return {'statusCode': 200, 'body': 'Notificación enviada'}
         
     except Exception as e:
-        print(f"❌ Error en notificación: {str(e)}")
+        print(f"Error en notificación: {str(e)}")
         return {'statusCode': 500, 'body': 'Error'}
 
 async def broadcast_to_subscribers(message):
@@ -27,7 +26,7 @@ async def broadcast_to_subscribers(message):
     
     api_id = os.environ.get('WEBSOCKET_API_ID')
     if not api_id:
-        print("⚠️ WEBSOCKET_API_ID no configurado")
+        print("WEBSOCKET_API_ID no configurado")
         return
     
     region = os.environ.get('AWS_REGION', 'us-east-1')
@@ -53,7 +52,7 @@ def should_notify(connection, message):
     action = message.get('action')
     
     if action == 'new_incident':
-        return user_role in ['autoridad', 'personal']
+        return user_role in ['autoridad', 'personal_admin']
     
     elif action == 'status_changed':
         return True
