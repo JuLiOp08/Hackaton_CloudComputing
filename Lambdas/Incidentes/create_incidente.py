@@ -17,17 +17,6 @@ VALID_TYPES = [
     "Fuga de agua", "Piso mojado", "Daño en utilería de salón", "Daño infraestructura", "Objeto perdido", "Emergencia médica", "Baño dañado"
 ]
 
-
-def validate_token(event):
-    auth = event['headers'].get('Authorization')
-    if not auth or not auth.startswith('Bearer '):
-        return None
-    token = auth.split(' ')[1]
-    try:
-        return jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-    except Exception:
-        return None
-
 def lambda_handler(event, context):
     try:
         auth = event["requestContext"]["authorizer"]
@@ -56,7 +45,7 @@ def lambda_handler(event, context):
             'tipo': tipo,
             'urgencia': urgencia,
             'imagen': imagen if imagen else None,
-            'reportanteId': claims['userId'],
+            'reportanteId': auth['userId'],
             'responsableId': None
         }
         
@@ -66,7 +55,7 @@ def lambda_handler(event, context):
             'codigo_incidente': codigo_incidente,
             'uuid_evento': evento_id,
             'tiempo': now,
-            'encargado': claims['userId'],
+            'encargado': auth['userId'],
             'estado': 'pendiente',
             'detalles': 'Incidente creado'
         }
