@@ -10,9 +10,10 @@ provider:
   iam:
     role: arn:aws:iam::374906019640:role/LabRole
   environment:
-    USERS_TABLE: Usuarios
-    INCIDENTES_TABLE: Incidentes
-    HISTORIAL_TABLE: HistorialIncidente
+    USERS_TABLE: t_users
+    INCIDENTES_TABLE: t_incidentes
+    HISTORIAL_TABLE: t_historial
+    TOKEN_TABLE: t_token
     SNS_TOPIC: !Ref AlertaUTECSNSTopic
     JWT_SECRET: alerta-utec-secret-key-2024
 functions:
@@ -201,7 +202,7 @@ resources:
     UsuariosTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: Usuarios
+        TableName: t_users
         AttributeDefinitions:
           - AttributeName: email
             AttributeType: S
@@ -210,11 +211,23 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
 
+    TokenTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: t_token
+        AttributeDefinitions:
+          - AttributeName: token
+            AttributeType: S
+        KeySchema:
+          - AttributeName: token
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+    
     # Tabla de Incidentes
     IncidentesTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: Incidentes
+        TableName: t_incidentes
         AttributeDefinitions:
           - AttributeName: codigo_incidente
             AttributeType: S
@@ -227,7 +240,7 @@ resources:
     HistorialIncidenteTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: HistorialIncidente
+        TableName: t_historial
         AttributeDefinitions:
           - AttributeName: codigo_incidente
             AttributeType: S
