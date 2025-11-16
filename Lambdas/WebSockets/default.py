@@ -105,16 +105,12 @@ def handler(event, context):
 
 
 def handle_get_active_incidents(connection_id, user_role, event):
-    """Obtener incidentes activos (pendiente + en proceso) - Para todos los usuarios"""
     try:
         incidentes_table = dynamodb.Table(INCIDENTES_TABLE)
         
-        scan = incidentes_table.scan(
-            FilterExpression='estado IN (:p, :e)',
-            ExpressionAttributeValues={
-                ':p': 'pendiente', 
-                ':e': 'en proceso'
-            }
+        scan = table.scan(
+            FilterExpression='estado IN :e',
+            ExpressionAttributeValues={':e': 'en proceso'}
         )
         incidentes = scan.get('Items', [])
         
@@ -167,55 +163,6 @@ def handle_get_all_incidents(connection_id, user_role, event):
             'message': 'Error al obtener incidentes'
         }, event)
 
-def handle_get_incidents(connection_id, user_role, body, event):
-    """Obtener incidentes según el rol del usuario"""
-    incidentes_table = dynamodb.Table(INCIDENTES_TABLE)
-    
-    if user_role == 'estudiante':
-        filter_expression = 'estado IN (:estado1, :estado2)'
-        expression_values = {
-            ':estado1': 'pendiente',
-            ':estado2': 'en_atencion'
-        }
-    elif user_role == 'personal_admin':
-        filter_expression = 'estado IN (:estado1, :estado2, :estado3)'
-        expression_values = {
-            ':estado1': 'pendiente',
-            ':estado2': 'en_atencion', 
-            ':estado3': 'resuelto'
-        }
-    else:
-        filter_expression = None
-        expression_values = None
-    
-    try:
-        if filter_expression:
-            response = incidentes_table.scan(
-                FilterExpression=filter_expression,
-                ExpressionAttributeValues=expression_values
-            )
-        else:
-            response = incidentes_table.scan()
-        
-        incidents = response.get('Items', [])
-        
-        incidents.sort(key=lambda x: x.get('fecha', ''), reverse=True)
-        
-        send_to_connection(connection_id, {
-            'action': 'incidents_data',
-            'incidents': incidents,
-            'total': len(incidents),
-            'userRole': user_role,
-            'timestamp': datetime.utcnow().isoformat()
-        }, event)
-        
-    except Exception as e:
-        print(f"Error obteniendo incidentes: {str(e)}")
-        send_to_connection(connection_id, {
-            'action': 'error',
-            'message': 'Error al obtener incidentes'
-        }, event)
-
 def handle_subscribe_incidents(connection_id, user_role, body, event):
     """Suscribirse a updates de incidentes"""
     table = dynamodb.Table(CONNECTIONS_TABLE)
@@ -228,7 +175,7 @@ def handle_subscribe_incidents(connection_id, user_role, body, event):
     
     if user_role == 'estudiante':
         subscription_data['incidentStates'] = ['en proceso']
-    elif user_role == 'personal_admin':  # ✅ CORREGIDO: 'personal' → 'personal_admin'
+    elif user_role == 'personal_admin':
         subscription_data['incidentStates'] = ['pendiente', 'en proceso']
     else:
         subscription_data['incidentStates'] = ['pendiente', 'en proceso', 'resuelto']
@@ -442,59 +389,9 @@ def handle_get_users(connection_id, user_role, body, event):
         }, event)
         
     except Exception as e:
-        print(f"❌ Error obteniendo usuarios: {str(e)}")
+        print(f"Error obteniendo usuarios: {str(e)}")
         send_to_connection(connection_id, {
             'action': 'error',
             'message': 'Error al cargar lista de usuarios'
         }, event)
 
-def handle_get_incident_history(connection_id, user_role, body, event):
-    incident_id = body.get('incident_id')
-    
-    if not incident_id:
-        send_to_connection(connection_id, {
-            'action': 'error',
-            'message': 'Falta incident_id'
-        }, event)
-        return
-    
-    try:
-        historial_table = dynamodb.Table(HISTORIAL_TABLE)
-        
-        response = historial_table.query(
-            KeyConditionExpression='codigo_incidente = :incident_id',
-            ExpressionAttributeValues={':incident_id': incident_id},
-            ScanIndexForward=False
-        )
-        
-        history = response.get('Items', [])
-        
-        send_to_connection(connection_id, {
-            'action': 'incident_history',
-            'incident_id': incident_id,
-            'history': history,
-            'total_events': len(history),
-            'timestamp': datetime.utcnow().isoformat()
-        }, event)
-        
-    except Exception as e:
-        print(f"Error obteniendo historial: {str(e)}")
-        send_to_connection(connection_id, {
-            'action': 'error',
-            'message': 'Error al cargar historial del incidente'
-        }, event)
-
-# ✅ CORREGIDO: Agregar las funciones que faltaban
-def handle_update_status(connection_id, user_role, user_id, body, event):
-    """Función placeholder para update_incident_status"""
-    send_to_connection(connection_id, {
-        'action': 'error',
-        'message': 'Función handle_update_status no implementada'
-    }, event)
-
-def handle_assign_incident(connection_id, user_role, user_id, body, event):
-    """Función placeholder para assign_incident"""
-    send_to_connection(connection_id, {
-        'action': 'error', 
-        'message': 'Función handle_assign_incident no implementada'
-    }, event)
