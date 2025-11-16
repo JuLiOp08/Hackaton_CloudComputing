@@ -63,7 +63,7 @@ def clasificar_incidentes_automaticamente():
 def determinar_urgencia_automatica(incident_type, location):
     """Determinar urgencia basado en tipo y ubicación"""
     high_urgency_types = ['Emergencia médica', 'Fuga de agua', 'Incendio', 'Fuga de gas']
-    high_urgency_locations = ['laboratorio', 'cocina', 'aula', 'biblioteca']
+    high_urgency_locations = ['laboratorio', 'cocina', 'aula', 'comedor']
     
     medium_urgency_types = ['Baño dañado', 'Daño infraestructura', 'Piso mojado']
     
