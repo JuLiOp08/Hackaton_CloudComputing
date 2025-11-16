@@ -47,7 +47,7 @@ def lambda_handler(event, context):
             'createdAt': now
         }
         table.put_item(Item=item)
-        token = jwt.encode({'userId': user_id, 'email': email, 'role': role}, JWT_SECRET, algorithm='HS256')
+        token = jwt.encode({'userId': user_id, 'email': email, 'role': role, 'exp': datetime.utcnow() + timedelta(hours=48)}, JWT_SECRET, algorithm='HS256')
         sns.publish(TopicArn=SNS_TOPIC, Message=json.dumps({
             'evento': 'usuario_registrado',
             'userId': user_id,
