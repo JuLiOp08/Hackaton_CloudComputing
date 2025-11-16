@@ -8,7 +8,8 @@ USERS_TABLE = os.environ.get('USERS_TABLE')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 
 def validate_token(event):
-    auth = event['headers'].get('Authorization')
+    headers = event.get('headers', {})
+    auth = headers.get('Authorization') or headers.get('authorization')
     if not auth or not auth.startswith('Bearer '):
         return None
     token = auth.split(' ')[1]
@@ -22,7 +23,8 @@ def lambda_handler(event, context):
         claims = validate_token(event)
         if not claims:
             return response(401, "Token inválido")
-        user_id = event['queryStringParameters'].get('userId')
+        params = event.get('queryStringParameters') or {}
+        user_id = params.get('userId')
         if not user_id:
             return response(400, "Falta userId")
         table = dynamodb.Table(USERS_TABLE)

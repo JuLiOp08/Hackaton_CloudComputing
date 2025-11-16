@@ -24,8 +24,11 @@ def lambda_handler(event, context):
         email = body.get('email')
         password = body.get('password')
         nombre = body.get('nombre')
+        role = body.get('role', 'estudiante')  # Por defecto estudiante
         if not email or not password or not nombre:
             return response(400, "Faltan campos obligatorios")
+        if role not in ['estudiante', 'autoridad']:
+            return response(400, "Rol inválido")
         if not is_institutional_email(email):
             return response(400, "Email debe ser institucional")
         table = dynamodb.Table(USERS_TABLE)
@@ -40,11 +43,11 @@ def lambda_handler(event, context):
             'tenant_id': user_id,
             'nombre': nombre,
             'contraseña_hash': hashed,
-            'role': 'estudiante',
+            'role': role,
             'createdAt': now
         }
         table.put_item(Item=item)
-        token = jwt.encode({'userId': user_id, 'email': email, 'role': 'estudiante'}, JWT_SECRET, algorithm='HS256')
+        token = jwt.encode({'userId': user_id, 'email': email, 'role': role}, JWT_SECRET, algorithm='HS256')
         sns.publish(TopicArn=SNS_TOPIC, Message=json.dumps({
             'evento': 'usuario_registrado',
             'userId': user_id,

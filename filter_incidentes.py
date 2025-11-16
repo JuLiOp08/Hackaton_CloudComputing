@@ -9,7 +9,8 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 
 
 def validate_token(event):
-    auth = event['headers'].get('Authorization')
+    headers = event.get('headers', {})
+    auth = headers.get('Authorization') or headers.get('authorization')
     if not auth or not auth.startswith('Bearer '):
         return None
     token = auth.split(' ')[1]
