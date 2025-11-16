@@ -13,7 +13,6 @@ provider:
     USERS_TABLE: t_users
     INCIDENTES_TABLE: t_incidentes
     HISTORIAL_TABLE: t_historial
-    TOKEN_TABLE: t_token
     SNS_TOPIC: !Ref AlertaUTECSNSTopic
     JWT_SECRET: alerta-utec-secret-key-2024
 functions:
@@ -208,18 +207,6 @@ resources:
             AttributeType: S
         KeySchema:
           - AttributeName: email
-            KeyType: HASH
-        BillingMode: PAY_PER_REQUEST
-
-    TokenTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: t_token
-        AttributeDefinitions:
-          - AttributeName: token
-            AttributeType: S
-        KeySchema:
-          - AttributeName: token
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
     
