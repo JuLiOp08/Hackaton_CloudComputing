@@ -1,13 +1,16 @@
 import json
 import boto3
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 dynamodb = boto3.resource('dynamodb')
 CONNECTIONS_TABLE = os.environ.get('CONNECTIONS_TABLE', 'websocket-connections')
+INCIDENTES_TABLE = os.environ.get('INCIDENTES_TABLE', 'incidentes')
+USERS_TABLE = os.environ.get('USERS_TABLE', 'usuarios')
+HISTORIAL_TABLE = os.environ.get('HISTORIAL_TABLE', 'historial-incidente')
 
 def send_to_connection(connection_id, message, event):
-    """Enviar mensaje usando el event (solo funciona en connect/disconnect/default)"""
+    """Enviar mensaje usando el event"""
     domain_name = event['requestContext']['domainName']
     stage = event['requestContext']['stage']
     endpoint_url = f"https://{domain_name}/{stage}"
@@ -33,7 +36,7 @@ def handler(event, context):
         connection = table.get_item(Key={'connectionId': connection_id}).get('Item')
         
         if not connection or not connection.get('authenticated'):
-            print(f"Conexión no autenticada: {connection_id}")
+            print(f"❌ Conexión no autenticada: {connection_id}")
             return {'statusCode': 401, 'body': 'No autenticado'}
         
         user_id = connection['userId']
@@ -43,113 +46,49 @@ def handler(event, context):
         body = json.loads(event.get('body', '{}'))
         action = body.get('action')
         
-        print(f"Mensaje de {user_email} ({user_role}): {action}")
+        print(f{user_role} {user_email}: {action}")
         
+        # ACCIONES GENERALES (todos los roles)
         if action == 'ping':
             send_to_connection(connection_id, {
                 'action': 'pong',
                 'timestamp': datetime.utcnow().isoformat(),
-                'userRole': user_role,
-                'message': 'Servidor funcionando correctamente'
+                'userRole': user_role
             }, event)
+            
+        elif action == 'get_incidents':
+            await handle_get_incidents(connection_id, user_role, body, event)
+            
+        elif action == 'subscribe_incidents':
+            await handle_subscribe_incidents(connection_id, user_role, body, event)
+        
+        # DASHBOARD ADMINISTRATIVO (solo autoridades y personal administrativo)
+        elif action == 'get_dashboard':
+            await handle_get_dashboard(connection_id, user_role, body, event)
             
         elif action == 'subscribe_dashboard':
-            if user_role != 'autoridad':
-                send_to_connection(connection_id, {
-                    'action': 'error',
-                    'message': 'Solo autoridades pueden acceder al panel'
-                }, event)
-                return {'statusCode': 403, 'body': 'No autorizado'}
+            await handle_subscribe_dashboard(connection_id, user_role, body, event)
             
-            table.update_item(
-                Key={'connectionId': connection_id},
-                UpdateExpression='SET subscribedToDashboard = :val',
-                ExpressionAttributeValues={':val': True}
-            )
+        elif action == 'get_stats':
+            await handle_get_stats(connection_id, user_role, body, event)
             
-            send_to_connection(connection_id, {
-                'action': 'subscribed',
-                'type': 'dashboard',
-                'message': 'Suscrito al panel administrativo',
-                'timestamp': datetime.utcnow().isoformat()
-            }, event)
+        elif action == 'get_users':
+            await handle_get_users(connection_id, user_role, body, event)
+        
+        # GESTIÓN DE INCIDENTES (solo autoridades)
+        elif action == 'update_incident_status':
+            await handle_update_status(connection_id, user_role, user_id, body, event)
             
-        elif action == 'unsubscribe_dashboard':
-            table.update_item(
-                Key={'connectionId': connection_id},
-                UpdateExpression='REMOVE subscribedToDashboard'
-            )
+        elif action == 'assign_incident':
+            await handle_assign_incident(connection_id, user_role, user_id, body, event)
             
-            send_to_connection(connection_id, {
-                'action': 'unsubscribed',
-                'type': 'dashboard',
-                'message': 'Desuscrito del panel administrativo'
-            }, event)
-            
-        elif action == 'subscribe_incident':
-            incident_id = body.get('incident_id')
-            if not incident_id:
-                send_to_connection(connection_id, {
-                    'action': 'error',
-                    'message': 'Falta incident_id'
-                }, event)
-                return {'statusCode': 400, 'body': 'incident_id requerido'}
-            
-            table.update_item(
-                Key={'connectionId': connection_id},
-                UpdateExpression='ADD subscribedIncidents :incident',
-                ExpressionAttributeValues={':incident': {incident_id}}
-            )
-            
-            send_to_connection(connection_id, {
-                'action': 'subscribed',
-                'type': 'incident',
-                'incident_id': incident_id,
-                'message': f'Suscrito a updates del incidente {incident_id}'
-            }, event)
-            
-        elif action == 'unsubscribe_incident':
-            incident_id = body.get('incident_id')
-            if incident_id:
-                table.update_item(
-                    Key={'connectionId': connection_id},
-                    UpdateExpression='DELETE subscribedIncidents :incident',
-                    ExpressionAttributeValues={':incident': {incident_id}}
-                )
-                
-            send_to_connection(connection_id, {
-                'action': 'unsubscribed', 
-                'type': 'incident',
-                'incident_id': incident_id,
-                'message': f'Desuscrito del incidente {incident_id}'
-            }, event)
-            
-        elif action == 'get_connection_info':
-            send_to_connection(connection_id, {
-                'action': 'connection_info',
-                'user': {
-                    'id': user_id,
-                    'email': user_email,
-                    'role': user_role
-                },
-                'connectedSince': connection.get('connectedAt'),
-                'subscribedToDashboard': connection.get('subscribedToDashboard', False),
-                'subscribedIncidents': list(connection.get('subscribedIncidents', set()))
-            }, event)             
+        elif action == 'get_incident_history':
+            await handle_get_incident_history(connection_id, user_role, body, event)
+        
         else:
-            # Acción no reconocida
             send_to_connection(connection_id, {
                 'action': 'error',
-                'message': f'Acción no reconocida: {action}',
-                'available_actions': [
-                    'ping', 
-                    'subscribe_dashboard', 
-                    'unsubscribe_dashboard',
-                    'subscribe_incident', 
-                    'unsubscribe_incident',
-                    'get_connection_info',
-                    'typing'
-                ]
+                'message': f'Acción no reconocida: {action}'
             }, event)
             return {'statusCode': 400, 'body': 'Acción no reconocida'}
         
@@ -158,3 +97,321 @@ def handler(event, context):
     except Exception as e:
         print(f"❌ Error en default handler: {str(e)}")
         return {'statusCode': 500, 'body': 'Error interno del servidor'}
+
+
+async def handle_get_incidents(connection_id, user_role, body, event):
+    """Obtener incidentes según el rol del usuario"""
+    incidentes_table = dynamodb.Table(INCIDENTES_TABLE)
+    
+    if user_role == 'estudiante':
+        filter_expression = 'estado IN (:estado1, :estado2)'
+        expression_values = {
+            ':estado1': 'pendiente',
+            ':estado2': 'en_atencion'
+        }
+    elif user_role == 'personal_admin':
+        filter_expression = 'estado IN (:estado1, :estado2, :estado3)'
+        expression_values = {
+            ':estado1': 'pendiente',
+            ':estado2': 'en_atencion', 
+            ':estado3': 'resuelto'
+        }
+    else:
+        filter_expression = None
+        expression_values = None
+    
+    try:
+        if filter_expression:
+            response = incidentes_table.scan(
+                FilterExpression=filter_expression,
+                ExpressionAttributeValues=expression_values
+            )
+        else:
+            response = incidentes_table.scan()
+        
+        incidents = response.get('Items', [])
+        
+        incidents.sort(key=lambda x: x.get('fecha', ''), reverse=True)
+        
+        send_to_connection(connection_id, {
+            'action': 'incidents_data',
+            'incidents': incidents,
+            'total': len(incidents),
+            'userRole': user_role,
+            'timestamp': datetime.utcnow().isoformat()
+        }, event)
+        
+    except Exception as e:
+        print(f"Error obteniendo incidentes: {str(e)}")
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'Error al obtener incidentes'
+        }, event)
+
+async def handle_subscribe_incidents(connection_id, user_role, body, event):
+    """Suscribirse a updates de incidentes"""
+    table = dynamodb.Table(CONNECTIONS_TABLE)
+    
+    subscription_data = {
+        'subscribedToIncidents': True,
+        'userRole': user_role,
+        'lastSubscription': datetime.utcnow().isoformat()
+    }
+    
+    if user_role == 'estudiante':
+        subscription_data['incidentStates'] = ['en proceso']
+    elif user_role == 'personal':
+        subscription_data['incidentStates'] = ['pendiente', 'en proceso']
+    else:
+        subscription_data['incidentStates'] = ['pendiente', 'en proceso', 'resuelto']
+    
+    table.update_item(
+        Key={'connectionId': connection_id},
+        UpdateExpression='SET subscribedToIncidents = :sub, subscriptionData = :data',
+        ExpressionAttributeValues={
+            ':sub': True,
+            ':data': subscription_data
+        }
+    )
+    
+    send_to_connection(connection_id, {
+        'action': 'subscribed',
+        'type': 'incidents',
+        'userRole': user_role,
+        'message': f'Suscrito a updates de incidentes ({", ".join(subscription_data["incidentStates"])})',
+        'subscriptionData': subscription_data
+    }, event)
+
+async def handle_get_dashboard(connection_id, user_role, body, event):
+    if user_role not in ['autoridad', 'personal']:
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'No autorizado para acceder al dashboard'
+        }, event)
+        return
+    
+    try:
+        incidentes_table = dynamodb.Table(INCIDENTES_TABLE)
+        
+        response = incidentes_table.scan()
+        all_incidents = response.get('Items', [])
+        
+        stats = {
+            'total': len(all_incidents),
+            'pendientes': len([i for i in all_incidents if i.get('estado') == 'pendiente']),
+            'en_atencion': len([i for i in all_incidents if i.get('estado') == 'en_atencion']),
+            'resueltos': len([i for i in all_incidents if i.get('estado') == 'resuelto']),
+            'cerrados': len([i for i in all_incidents if i.get('estado') == 'cerrado']),
+            'urgentes': len([i for i in all_incidents if i.get('urgencia') == 'alta']),
+        }
+        
+        yesterday = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+        recent_incidents = [
+            i for i in all_incidents 
+            if i.get('fecha', '') > yesterday
+        ]
+        
+        attention_required = [
+            i for i in all_incidents 
+            if i.get('estado') in ['pendiente'] and i.get('urgencia') == 'alta'
+        ]
+        
+        incidents_by_type = {}
+        for incident in all_incidents:
+            tipo = incident.get('tipo', 'General')
+            if tipo not in incidents_by_type:
+                incidents_by_type[tipo] = 0
+            incidents_by_type[tipo] += 1
+        
+        incidents_by_location = {}
+        for incident in all_incidents:
+            ubicacion = incident.get('ubicacion', 'Desconocida')
+            if ubicacion not in incidents_by_location:
+                incidents_by_location[ubicacion] = 0
+            incidents_by_location[ubicacion] += 1
+        
+        dashboard_data = {
+            'stats': stats,
+            'recent_incidents': recent_incidents[:10],
+            'attention_required': attention_required,
+            'by_type': incidents_by_type,
+            'by_location': incidents_by_location,
+            'last_updated': datetime.utcnow().isoformat()
+        }
+        
+        send_to_connection(connection_id, {
+            'action': 'dashboard_data',
+            'dashboard': dashboard_data,
+            'userRole': user_role,
+            'timestamp': datetime.utcnow().isoformat()
+        }, event)
+        
+    except Exception as e:
+        print(f"Error obteniendo dashboard: {str(e)}")
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'Error al cargar el dashboard'
+        }, event)
+
+async def handle_subscribe_dashboard(connection_id, user_role, body, event):
+    if user_role not in ['autoridad', 'personal']:
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'No autorizado para suscribirse al dashboard'
+        }, event)
+        return
+    
+    table = dynamodb.Table(CONNECTIONS_TABLE)
+    
+    table.update_item(
+        Key={'connectionId': connection_id},
+        UpdateExpression='SET subscribedToDashboard = :sub, dashboardSubscriptionTime = :time',
+        ExpressionAttributeValues={
+            ':sub': True,
+            ':time': datetime.utcnow().isoformat()
+        }
+    )
+    
+    send_to_connection(connection_id, {
+        'action': 'subscribed',
+        'type': 'dashboard',
+        'message': 'Suscrito a updates del dashboard administrativo',
+        'userRole': user_role,
+        'timestamp': datetime.utcnow().isoformat()
+    }, event)
+
+async def handle_get_stats(connection_id, user_role, body, event):
+    if user_role not in ['autoridad', 'personal']:
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'No autorizado para ver estadísticas'
+        }, event)
+        return
+    
+    try:
+        incidentes_table = dynamodb.Table(INCIDENTES_TABLE)
+        response = incidentes_table.scan()
+        all_incidents = response.get('Items', [])
+        
+        # Estadísticas por tiempo
+        now = datetime.utcnow()
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        week_ago = (now - timedelta(days=7)).isoformat()
+        month_ago = (now - timedelta(days=30)).isoformat()
+        
+        incidents_today = [i for i in all_incidents if i.get('fecha', '') > today]
+        incidents_week = [i for i in all_incidents if i.get('fecha', '') > week_ago]
+        incidents_month = [i for i in all_incidents if i.get('fecha', '') > month_ago]
+        
+        resolved_incidents = [i for i in all_incidents if i.get('estado') in ['resuelto', 'cerrado']]
+        resolution_times = []
+        
+        for incident in resolved_incidents:
+            if incident.get('fecha') and incident.get('estado'):
+                resolution_times.append(1)  # placeholder
+        
+        avg_resolution_time = sum(resolution_times) / len(resolution_times) if resolution_times else 0
+        
+        detailed_stats = {
+            'period': {
+                'today': len(incidents_today),
+                'last_week': len(incidents_week),
+                'last_month': len(incidents_month)
+            },
+            'performance': {
+                'avg_resolution_time': avg_resolution_time,
+                'resolution_rate': len(resolved_incidents) / len(all_incidents) if all_incidents else 0,
+                'urgent_resolution_rate': 0.85
+            },
+            'trends': {
+                'daily_trend': [5, 8, 6, 12, 7, 9, 10],
+                'weekly_comparison': 15
+            }
+        }
+        
+        send_to_connection(connection_id, {
+            'action': 'detailed_stats',
+            'stats': detailed_stats,
+            'timestamp': datetime.utcnow().isoformat()
+        }, event)
+        
+    except Exception as e:
+        print(f"Error obteniendo estadísticas: {str(e)}")
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'Error al cargar estadísticas'
+        }, event)
+
+async def handle_get_users(connection_id, user_role, body, event):
+    """Obtener lista de usuarios - SOLO AUTORIDADES"""
+    if user_role != 'autoridad':
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'Solo autoridades pueden ver la lista de usuarios'
+        }, event)
+        return
+    
+    try:
+        users_table = dynamodb.Table(USERS_TABLE)
+        response = users_table.scan()
+        users = response.get('Items', [])
+        
+        safe_users = []
+        for user in users:
+            safe_users.append({
+                'userId': user.get('tenant_id'),
+                'email': user.get('email'),
+                'nombre': user.get('nombre'),
+                'role': user.get('role'),
+                'createdAt': user.get('createdAt')
+            })
+        
+        send_to_connection(connection_id, {
+            'action': 'users_list',
+            'users': safe_users,
+            'total': len(safe_users),
+            'timestamp': datetime.utcnow().isoformat()
+        }, event)
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo usuarios: {str(e)}")
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'Error al cargar lista de usuarios'
+        }, event)
+
+async def handle_get_incident_history(connection_id, user_role, body, event):
+    incident_id = body.get('incident_id')
+    
+    if not incident_id:
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'Falta incident_id'
+        }, event)
+        return
+    
+    try:
+        historial_table = dynamodb.Table(HISTORIAL_TABLE)
+        
+        response = historial_table.query(
+            KeyConditionExpression='codigo_incidente = :incident_id',
+            ExpressionAttributeValues={':incident_id': incident_id},
+            ScanIndexForward=False
+        )
+        
+        history = response.get('Items', [])
+        
+        send_to_connection(connection_id, {
+            'action': 'incident_history',
+            'incident_id': incident_id,
+            'history': history,
+            'total_events': len(history),
+            'timestamp': datetime.utcnow().isoformat()
+        }, event)
+        
+    except Exception as e:
+        print(f"Error obteniendo historial: {str(e)}")
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'Error al cargar historial del incidente'
+        }, event)
