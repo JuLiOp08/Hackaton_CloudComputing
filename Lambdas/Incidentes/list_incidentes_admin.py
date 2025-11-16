@@ -7,21 +7,15 @@ dynamodb = boto3.resource('dynamodb')
 INCIDENTES_TABLE = os.environ.get('INCIDENTES_TABLE')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 
-def validate_token(event):
-    auth = event['headers'].get('Authorization')
-    if not auth or not auth.startswith('Bearer '):
-        return None
-    token = auth.split(' ')[1]
-    try:
-        return jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-    except Exception:
-        return None
-
 def lambda_handler(event, context):
     try:
-        claims = validate_token(event)
-        if not claims or claims.get('role') != 'autoridad':
-            return response(403, "No autorizado")
+
+        auth = event["requestContext"]["authorizer"]
+    
+        # Verificar rol
+        if auth["context"]["role"] != "autoridad" or auth["context"]["role"] != personal_admin:
+            return response(403, "No autorizado - se requiere rol de autorizacion")
+        
         table = dynamodb.Table(INCIDENTES_TABLE)
         scan = table.scan()
         incidentes = scan.get('Items', [])
