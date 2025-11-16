@@ -23,6 +23,9 @@ def lambda_handler(event, context):
             return response(403, "No autorizado - se requiere rol de autoridad o personal admin")
         
         body = json.loads(event.get('body', '{}'))
+    except Exception as e:
+        return response(500, f"Error interno: {e}")
+        
 def get_body(event):
     body = event.get('body', '{}')
     if isinstance(body, dict):
