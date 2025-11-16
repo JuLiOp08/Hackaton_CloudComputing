@@ -8,10 +8,7 @@ INCIDENTES_TABLE = os.environ.get('INCIDENTES_TABLE')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 
 def lambda_handler(event, context):
-    try:
-
-        auth = event["requestContext"]["authorizer"]
-        
+    try:        
         incidente_id = event['queryStringParameters'].get('codigo_incidente')
         
         if not incidente_id:
