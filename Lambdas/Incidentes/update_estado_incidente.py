@@ -16,7 +16,7 @@ VALID_STATES = ['pendiente', 'en_proceso', 'resuelto']
 
 def lambda_handler(event, context):
     try:
-        if auth["context"]["role"] != "autoridad" or auth["context"]["role"] != personal_admin:
+        if auth["context"]["role"] != "autoridad" or auth["context"]["role"] != "personal_admin":
             return response(403, "No autorizado - se requiere rol de autorizacion")
         
         body = json.loads(event.get('body', '{}'))
