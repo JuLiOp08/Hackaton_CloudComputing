@@ -30,7 +30,7 @@ def clasificar_incidentes_automaticamente():
     
     try:
         response = dynamodb.scan(
-            TableName='incidentes',
+            TableName='t_incidentes',
             FilterExpression='#estado = :estado',
             ExpressionAttributeNames={'#estado': 'estado'},
             ExpressionAttributeValues={':estado': {'S': 'pendiente'}}
@@ -49,7 +49,7 @@ def clasificar_incidentes_automaticamente():
             current_urgency = incident.get('urgencia', {'S': 'media'})['S']
             if urgency != current_urgency:
                 dynamodb.update_item(
-                    TableName='incidentes',
+                    TableName='t_incidentes',
                     Key={'codigo_incidente': incident['codigo_incidente']},
                     UpdateExpression='SET urgencia = :urgencia',
                     ExpressionAttributeValues={':urgencia': {'S': urgency}}
@@ -78,14 +78,14 @@ def determinar_urgencia_automatica(incident_type, location):
 
 def enviar_alertas_automaticas():
     """Enviar alertas automáticas para incidentes de alta urgencia"""
-    print("🚨 Enviando alertas automáticas...")
+    print("Enviando alertas automáticas...")
     
     dynamodb = get_aws_client('dynamodb')
     sns = get_aws_client('sns')
     
     try:
         response = dynamodb.scan(
-            TableName='incidentes',
+            TableName='t_incidentes',
             FilterExpression='urgencia = :urgencia AND #estado = :estado',
             ExpressionAttributeNames={'#estado': 'estado'},
             ExpressionAttributeValues={
@@ -114,7 +114,7 @@ def enviar_alertas_automaticas():
             sns.publish(
                 TopicArn='arn:aws:sns:us-east-1:123456789012:alerta-utec-notifications',
                 Message=json.dumps(message),
-                Subject='🚨 Alerta UTEC - Incidente de Alta Urgencia'
+                Subject='Alerta UTEC - Incidente de Alta Urgencia'
             )
             print(f"Alerta enviada para incidente {incident_id}")
             
@@ -122,45 +122,6 @@ def enviar_alertas_automaticas():
         print(f"Error enviando alertas: {str(e)}")
         raise
 
-def detectar_anomalias_patrones():
-    """Detección de patrones anómalos usando Machine Learning"""
-    print("Detectando patrones anómalos...")
-    
-    dynamodb = get_aws_client('dynamodb')
-    
-    try:
-        response = dynamodb.scan(TableName='incidentes')
-        incidents_data = []
-        
-        for item in response['Items']:
-            try:
-                incident_date = datetime.fromisoformat(item['fecha']['S'].replace('Z', '+00:00'))
-                incidents_data.append({
-                    'hora': incident_date.hour,
-                    'dia_semana': incident_date.weekday(),
-                    'tipo': item['tipo']['S'],
-                    'ubicacion': item['ubicacion']['S'],
-                    'urgencia': item.get('urgencia', {'S': 'media'})['S']
-                })
-            except Exception as e:
-                continue
-        
-        if len(incidents_data) > 10:
-            df = pd.DataFrame(incidents_data)
-            
-            df_encoded = pd.get_dummies(df[['tipo', 'ubicacion', 'urgencia']])
-            
-            model = IsolationForest(contamination=0.1, random_state=42)
-            predictions = model.fit_predict(df_encoded)
-            
-            anomalies = sum(predictions == -1)
-            print(f"🔍 Detectadas {anomalies} anomalías en los datos")
-            
-            if anomalies > 0:
-                print("Patrones anómalos detectados - revisar posibles issues")
-                
-    except Exception as e:
-        print(f"Error en detección de anomalías: {str(e)}")
 
 with DAG(
     'gestion_automatizada_incidentes',
@@ -181,9 +142,4 @@ with DAG(
         python_callable=enviar_alertas_automaticas
     )
 
-    anomalias_task = PythonOperator(
-        task_id='detectar_anomalias_patrones',
-        python_callable=detectar_anomalias_patrones
-    )
-
-    clasificar_task >> [alertas_task, anomalias_task]
+    clasificar_task >> [alertas_task]
