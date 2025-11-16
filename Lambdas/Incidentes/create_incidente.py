@@ -38,14 +38,18 @@ def lambda_handler(event, context):
         ubicacion = body.get('ubicacion')
         descripcion = body.get('descripcion')
         tipo = body.get('tipo')
+        lugar = body.get('lugar')
         urgencia = body.get('urgencia')
         imagen = body.get('imagen')
         
-        if not ubicacion or not descripcion or not tipo or not urgencia:
+        if not ubicacion or not descripcion or not tipo or not urgencia or not lugar:
             return response(400, "Faltan campos obligatorios")
             
         if tipo not in VALID_TYPES:
             return response(400, "Tipo de incidente inválido")
+
+        if lugar not in VALID_PLACES:
+            return response(400, "Lugar del incidente invalido")
             
         codigo_incidente = str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
@@ -56,6 +60,7 @@ def lambda_handler(event, context):
             'estado': 'pendiente',
             'fecha': now,
             'tipo': tipo,
+            'lugar': lugar,
             'urgencia': urgencia,
             'imagen': imagen if imagen else None,
             'reportanteId': auth['userId'],
@@ -78,6 +83,7 @@ def lambda_handler(event, context):
             'codigo_incidente': codigo_incidente,
             'ubicacion': ubicacion,
             'tipo': tipo,
+            'lugar': lugar,
             'urgencia': urgencia,
             'reportanteId': auth['userId'],
             'fecha': now
@@ -98,6 +104,7 @@ def lambda_handler(event, context):
                     'codigo_incidente': codigo_incidente,
                     'ubicacion': ubicacion,
                     'tipo': tipo,
+                    'lugar': lugar,
                     'urgencia': urgencia,
                     'reportanteId': auth['userId'],
                     'fecha': now
