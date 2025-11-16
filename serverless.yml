@@ -1,207 +1,148 @@
-org: julio123
+org: ignaciovidal
 service: alerta-utec
 
 provider:
   name: aws
-  runtime: python3.13
-  # Default memory size for functions (default: 1024MB)
+  runtime: python3.12
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
   memorySize: 1024
   timeout: 20
-  iam:
-    role: arn:aws:iam::374906019640:role/LabRole
   environment:
     USERS_TABLE: t_users
     INCIDENTES_TABLE: t_incidentes
     HISTORIAL_TABLE: t_historial
-    WEBSOCKET_TABLE: t_connections
+    CONNECTIONS_TABLE: t_connections
     SNS_TOPIC: !Ref AlertaUTECSNSTopic
     JWT_SECRET: alerta-utec-secret-key-2024
 
-custom:
-  pythonRequirements: {}
 functions:
+  # ================== AUTHENTICATION ==============
   register_user:
     handler: Lambdas/Auth/register_user.lambda_handler
-    package:
-      include:
-        - ./**  # Incluir todo el contenido del directorio
     events:
       - http:
           path: /usuarios/registro
           method: post
           cors: true
-          integration: lambda
-  
+
   login_user:
     handler: Lambdas/Auth/login_user.lambda_handler
-    package:
-      include:
-        - ./**
     events:
       - http:
           path: /usuarios/login
           method: post
           cors: true
-          integration: lambda
-  
+
+  validate_token:
+    handler: Lambdas/Auth/validate_token.lambda_handler
+
+  # ================= WEBSOCKETS ==================
+  connect:
+    handler: Lambdas/WebSockets/connect.handler
+    events:
+      - websocket:
+          route: $connect
+
+  disconnect:
+    handler: Lambdas/WebSockets/disconnect.handler
+    events:
+      - websocket:
+          route: $disconnect
+
+  default:
+    handler: Lambdas/WebSockets/default.handler
+    events:
+      - websocket:
+          route: $default
+
+  notify_handler:
+    handler: Lambdas/WebSockets/notify_handler.handler
+    environment:
+      WEBSOCKET_API_ID: ${env:WEBSOCKET_API_ID, ''}
+
+  # =================== USERS ======================
   get_user_by_id:
     handler: Lambdas/User/get_user_by_id.lambda_handler
-    package:
-      include:
-        - ./**
     events:
       - http:
           path: /usuarios/buscar
           method: get
           cors: true
-          integration: lambda
-  
+          authorizer:
+            name: validate_token
+            resultTtlInSeconds: 0
+
   list_users:
     handler: Lambdas/User/list_users.lambda_handler
-    package:
-      include:
-        - ./**
     events:
       - http:
           path: /usuarios/listar
           method: get
           cors: true
-          integration: lambda
-  
+          authorizer:
+            name: validate_token
+            resultTtlInSeconds: 0
+
+  # ================= INCIDENTS ===================
   create_incidente:
     handler: Lambdas/Incidentes/create_incidente.lambda_handler
-    package:
-      include:
-        - ./**
     events:
       - http:
           path: /incidentes/crear
           method: post
           cors: true
-          integration: lambda
-  
-  list_incidentes_activos:
-    handler: Lambdas/Incidentes/list_incidentes_activos.lambda_handler
-    package:
-      include:
-        - ./**
-    events:
-      - http:
-          path: /incidentes/activos
-          method: get
-          cors: true
-          integration: lambda
-  
-  list_incidentes_admin:
-    handler: Lambdas/Incidentes/list_incidentes_admin.lambda_handler
-    package:
-      include:
-        - ./**
-    events:
-      - http:
-          path: /incidentes/admin
-          method: get
-          cors: true
-          integration: lambda
-  
-  filter_incidentes:
-    handler: Lambdas/Incidentes/filter_incidentes.lambda_handler
-    package:
-      include:
-        - ./**
-    events:
-      - http:
-          path: /incidentes/filtrar
-          method: get
-          cors: true
-          integration: lambda
-  
+          authorizer:
+            name: validate_token
+            resultTtlInSeconds: 0
+
   get_incidente_by_id:
     handler: Lambdas/Incidentes/get_incidente_by_id.lambda_handler
-    package:
-      include:
-        - ./**
     events:
       - http:
           path: /incidentes/buscar
           method: get
           cors: true
-          integration: lambda
-  
-  add_reporte_incidente:
-    handler: Lambdas/Incidentes/add_reporte_incidente.lambda_handler
-    package:
-      include:
-        - ./**
-    events:
-      - http:
-          path: /incidentes/reporte
-          method: post
-          cors: true
-          integration: lambda
-  
-  list_historial:
-    handler: Lambdas/Historial/list_historial.lambda_handler
-    package:
-      include:
-        - ./**
-    events:
-      - http:
-          path: /historial/listar
-          method: get
-          cors: true
-          integration: lambda
-  
-  list_historial_by_incidente:
-    handler: Lambdas/Historial/list_historial_by_incidente.lambda_handler
-    package:
-      include:
-        - ./**
-    events:
-      - http:
-          path: /historial/incidente
-          method: get
-          cors: true
-          integration: lambda
-  
+          authorizer:
+            name: validate_token
+            resultTtlInSeconds: 0
+
   update_estado_incidente:
     handler: Lambdas/Incidentes/update_estado_incidente.lambda_handler
-    package:
-      include:
-        - ./**
     events:
       - http:
           path: /incidentes/estado
           method: put
           cors: true
-          integration: lambda
-  
-  asignar_responsable:
-    handler: Lambdas/Incidentes/asignar_responsable.lambda_handler
-    package:
-      include:
-        - ./**
+          authorizer:
+            name: validate_token
+            resultTtlInSeconds: 0
+
+  # ================ HISTORIAL ===================
+  list_historial:
+    handler: Lambdas/Historial/list_historial.lambda_handler
     events:
       - http:
-          path: /incidentes/asignar
-          method: put
+          path: /historial/listar
+          method: get
           cors: true
-          integration: lambda
-  
-  reasignar_responsable:
-    handler: Lambdas/Incidentes/reasignar_responsable.lambda_handler
-    package:
-      include:
-        - ./**
+          authorizer:
+            name: validate_token
+            resultTtlInSeconds: 0
+
+  list_historial_by_incidente:
+    handler: Lambdas/Historial/list_historial_by_incidente.lambda_handler
     events:
       - http:
-          path: /incidentes/reasignar
-          method: put
+          path: /historial/incidente
+          method: get
           cors: true
-          integration: lambda
+          authorizer:
+            name: validate_token
+            resultTtlInSeconds: 0
+
 resources:
   Resources:
-    # Tabla de Usuarios
     UsuariosTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -214,7 +155,6 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
     
-    # Tabla de Incidentes
     IncidentesTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -239,7 +179,6 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
 
-    # Tabla de Historial de Incidentes
     HistorialIncidenteTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -256,10 +195,17 @@ resources:
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
 
-    # SNS Topic para AlertaUTEC
     AlertaUTECSNSTopic:
       Type: AWS::SNS::Topic
       Properties:
         TopicName: AlertaUTEC
         DisplayName: Notificaciones AlertaUTEC
 
+  Outputs:
+    ApiEndpoint:
+      Description: "API Gateway endpoint URL"
+      Value: !Sub "https://${AWS::ApiGateway::RestApi}.execute-api.${AWS::Region}.amazonaws.com/${self:provider.stage}"
+    
+    WebSocketApiId:
+      Description: "WebSocket API ID"
+      Value: !Ref WebSocketApi
