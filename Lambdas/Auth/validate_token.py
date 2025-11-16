@@ -1,33 +1,45 @@
-import boto3
-from datetime import datetime
+import json
+import jwt
+import os
+
+JWT_SECRET = os.environ["JWT_SECRET"]
 
 def lambda_handler(event, context):
-    # Entrada (json)
-    token = event['token']
-    # Proceso
-    dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('t_token')
-    response = table.get_item(
-        Key={
-            'token': token
-        }
-    )
-    if 'Item' not in response:
-        return {
-            'statusCode': 403,
-            'body': 'Token no existe'
-        }
-    else:
-        expires = response['Item']['expires']
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        if now > expires:
-            return {
-                'statusCode': 403,
-                'body': 'Token expirado'
-            }
-    
-    # Salida (json)
+    token = event["headers"].get("Authorization", "")
+    token = token.replace("Bearer ", "")
+
+    if not token:
+        return deny("missing token")
+
+    try:
+        decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+    except jwt.ExpiredSignatureError:
+        return deny("expired token")
+    except Exception as e:
+        return deny("invalid token")
+
+    # Claims que quieres enviar al backend
+    return allow(decoded["userId"], decoded)
+
+
+def allow(principalId, context):
     return {
-        'statusCode': 200,
-        'body': 'Token válido'
+        "principalId": principalId,
+        "context": context
+    }
+
+
+def deny(message):
+    return {
+        "principalId": "anonymous",
+        "policyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": "execute-api:Invoke",
+                    "Effect": "Deny",
+                    "Resource": "*"
+                }
+            ]
+        }
     }
