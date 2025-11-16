@@ -7,26 +7,19 @@ dynamodb = boto3.resource('dynamodb')
 USERS_TABLE = os.environ.get('USERS_TABLE')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 
-def validate_token(event):
-    headers = event.get('headers', {})
-    auth = headers.get('Authorization') or headers.get('authorization')
-    if not auth or not auth.startswith('Bearer '):
-        return None
-    token = auth.split(' ')[1]
-    try:
-        return jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-    except Exception:
-        return None
-
 def lambda_handler(event, context):
     try:
-        claims = validate_token(event)
-        if not claims:
-            return response(401, "Token inválido")
+        auth = event["requestContext"]["authorizer"]
+
+        if auth["context"]["role"] != "autoridad" or auth["context"]["role"] != personal_admin:
+            return response(403, "No autorizado - se requiere rol de autorizacion")
+        
         params = event.get('queryStringParameters') or {}
         user_id = params.get('userId')
+        
         if not user_id:
             return response(400, "Falta userId")
+            
         table = dynamodb.Table(USERS_TABLE)
         scan = table.scan(FilterExpression='tenant_id = :uid', ExpressionAttributeValues={':uid': user_id})
         items = scan.get('Items', [])
