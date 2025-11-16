@@ -69,13 +69,15 @@ def lambda_handler(event, context):
             'reportanteId': auth['userId'],
             'fecha': now
         }))
-        return response(200, {
-            'codigo_incidente': codigo_incidente,
-            'estado': 'pendiente',
-            'fecha': now
-        })
+
     except Exception as e:
         return response(500, str(e))
+        
+    return response(200, {
+        'codigo_incidente': codigo_incidente,
+        'estado': 'pendiente',
+        'fecha': now
+    })
 
 def response(code, body):
     return {
