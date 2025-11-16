@@ -259,3 +259,6 @@ resources:
       Properties:
         TopicName: AlertaUTEC
         DisplayName: Notificaciones AlertaUTEC
+
+plugins:
+  - serverless-python-requirements
