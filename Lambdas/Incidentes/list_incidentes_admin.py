@@ -13,7 +13,7 @@ def lambda_handler(event, context):
         auth = event["requestContext"]["authorizer"]
     
         # Verificar rol
-        if auth["context"]["role"] != "autoridad" or auth["context"]["role"] != personal_admin:
+        if auth["context"]["role"] != "autoridad":
             return response(403, "No autorizado - se requiere rol de autorizacion")
         
         table = dynamodb.Table(INCIDENTES_TABLE)
