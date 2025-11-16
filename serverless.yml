@@ -200,7 +200,7 @@ resources:
       Properties:
         TopicName: AlertaUTEC
         DisplayName: Notificaciones AlertaUTEC
-
+        
   Outputs:
     ApiEndpoint:
       Description: "API Gateway endpoint URL"
@@ -209,3 +209,10 @@ resources:
     WebSocketApiId:
       Description: "WebSocket API ID"
       Value: !Ref WebSocketApi
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
