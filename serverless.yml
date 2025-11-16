@@ -8,6 +8,8 @@ provider:
   stage: ${opt:stage, 'dev'}
   memorySize: 1024
   timeout: 20
+  iam:
+    role: arn:aws:iam::166641392304:role/LabRole
   environment:
     USERS_TABLE: t_users
     INCIDENTES_TABLE: t_incidentes
