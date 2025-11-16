@@ -55,17 +55,14 @@ def handler(event, context):
                 'userRole': user_role
             }, event)
             
-        elif action == 'get_incidents':
-            handle_get_incidents(connection_id, user_role, body, event)
+        elif action == 'get_active_incidents':
+            handle_get_active_incidents(connection_id, user_role, event)
+
+        elif action == 'get_all_incidents':
+            handle_get_all_incidents(connection_id, user_role, event)
             
         elif action == 'subscribe_incidents':
             handle_subscribe_incidents(connection_id, user_role, body, event)
-
-        elif action == 'get_active_incidents':
-            handle_get_active_incidents(connection_id, user_role, event)
-            
-        elif action == 'get_all_incidents':
-            handle_get_all_incidents(connection_id, user_role, event)
         
         # DASHBOARD ADMINISTRATIVO (solo autoridades y personal administrativo)
         elif action == 'get_dashboard':
@@ -79,16 +76,7 @@ def handler(event, context):
             
         elif action == 'get_users':
             handle_get_users(connection_id, user_role, body, event)
-        
-        # GESTIÓN DE INCIDENTES (solo autoridades)
-        elif action == 'update_incident_status':
-            handle_update_status(connection_id, user_role, user_id, body, event)
             
-        elif action == 'assign_incident':
-            handle_assign_incident(connection_id, user_role, user_id, body, event)
-            
-        elif action == 'get_incident_history':
-            handle_get_incident_history(connection_id, user_role, body, event)
         
         else:
             send_to_connection(connection_id, {
@@ -108,7 +96,7 @@ def handle_get_active_incidents(connection_id, user_role, event):
     try:
         incidentes_table = dynamodb.Table(INCIDENTES_TABLE)
         
-        scan = table.scan(
+        scan = incidentes_table.scan(
             FilterExpression='estado IN :e',
             ExpressionAttributeValues={':e': 'en proceso'}
         )
