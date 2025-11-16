@@ -107,7 +107,26 @@ Backend serverless para la gestión de incidentes universitarios, autenticación
 - **Historial-Incidente**: codigo_incidente (PK), uuid_evento (SK), tiempo, encargado, estado, detalles
 
 ## Tipos de Incidentes
-Fuga de agua, Bote de basura lleno, Piso mojado, Daño en utilería de salón, Mesas, Sillas, Muebles, Enchufes dañados, Proyector dañado, Computadoras, teclados en mal funcionamiento, Daño infraestructura, Salón sucio, Ventanas que no abren o cierran, Objeto perdido, Emergencia médica, Aula sucia, Baño sin agua, Otros incidentes
+Fuga de agua
+Piso mojado
+Daño en utilería de salón
+- Muebles dañados
+- Enchufes dañados
+- Dispositivos inteligentes dañados
+- General (Para no obligar al usuario a tener un grado de especificación muy grande)
+Daño infraestructura:
+- Paredes, piso, techo dañados
+- Ventanas que no abren o cierran
+- Pizarra dañada
+- General (Para no obligar al usuario a tener un grado de especificación muy grande)
+Emergencia Medica
+Baño dañado
+- Sin agua
+- Sin papel
+- Cubiculos dañados
+- Urinarios dañados
+- General (Para no obligar al usuario a tener un grado de especificación muy grande)
+
 
 ## Notificaciones SNS
 - Al crear usuario
