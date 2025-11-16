@@ -3,6 +3,7 @@ import boto3
 import bcrypt
 import jwt
 import os
+from datetime import datetime, timedelta
 
 dynamodb = boto3.resource('dynamodb')
 USERS_TABLE = os.environ.get('USERS_TABLE')
@@ -46,5 +47,9 @@ def response(code, body):
     return {
         'statusCode': code,
         'headers': {'Content-Type': 'application/json'},
-        'body': json.dumps({'success': code == 200, 'data': body if code == 200 else None, 'error': None if code == 200 else body})
+        'body': json.dumps({
+            'success': code == 200, 
+            'data': body if code == 200 else None, 
+            'error': None if code == 200 else body
+        })
     }
