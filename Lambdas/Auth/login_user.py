@@ -13,16 +13,32 @@ def lambda_handler(event, context):
         body = json.loads(event.get('body', '{}'))
         email = body.get('email')
         password = body.get('password')
+        
         if not email or not password:
             return response(400, "Faltan campos obligatorios")
+            
         table = dynamodb.Table(USERS_TABLE)
         user = table.get_item(Key={'email': email}).get('Item')
+        
         if not user:
             return response(404, "Usuario no encontrado")
+            
         if not bcrypt.checkpw(password.encode('utf-8'), user['contraseña_hash'].encode('utf-8')):
             return response(401, "Credenciales inválidas")
-        token = jwt.encode({'userId': user['tenant_id'], 'email': email, 'role': user['role']}, JWT_SECRET, algorithm='HS256')
+            
+        token = jwt.encode(
+            {
+                'userId': user['tenant_id'],
+                'email': email,
+                'role': user['role'],
+                'exp': datetime.utcnow() + timedelta(hours=48)
+            },
+            JWT_SECRET,
+            algorithm='HS256'
+        )
+        
         return response(200, {'token': token})
+        
     except Exception as e:
         return response(500, str(e))
 
