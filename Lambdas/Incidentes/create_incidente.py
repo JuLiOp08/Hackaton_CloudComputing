@@ -3,6 +3,7 @@ import boto3
 import uuid
 import jwt
 import os
+import time
 from datetime import datetime
 
 dynamodb = boto3.resource('dynamodb')
@@ -13,7 +14,7 @@ SNS_TOPIC = os.environ.get('SNS_TOPIC')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 
 VALID_TYPES = [
-    "Fuga de agua", "Bote de basura lleno", "Piso mojado", "Daño en utilería de salón", "Mesas", "Sillas", "Muebles", "Enchufes dañados", "Proyector dañado", "Computadoras, teclados en mal funcionamiento", "Daño infraestructura", "Salón sucio", "Ventanas que no abren o cierran", "Objeto perdido", "Emergencia médica", "Aula sucia", "Baño sin agua", "Otros incidentes"
+    "Fuga de agua", "Piso mojado", "Daño en utilería de salón", "Daño infraestructura", "Objeto perdido", "Emergencia médica", "Baño dañado"
 ]
 
 
@@ -29,19 +30,21 @@ def validate_token(event):
 
 def lambda_handler(event, context):
     try:
-        claims = validate_token(event)
-        if not claims:
-            return response(401, "Token inválido")
+        auth = event["requestContext"]["authorizer"]
+        
         body = json.loads(event.get('body', '{}'))
         ubicacion = body.get('ubicacion')
         descripcion = body.get('descripcion')
         tipo = body.get('tipo')
         urgencia = body.get('urgencia')
         imagen = body.get('imagen')
+        
         if not ubicacion or not descripcion or not tipo or not urgencia:
             return response(400, "Faltan campos obligatorios")
+            
         if tipo not in VALID_TYPES:
             return response(400, "Tipo de incidente inválido")
+            
         codigo_incidente = str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
         incidente = {
@@ -56,6 +59,7 @@ def lambda_handler(event, context):
             'reportanteId': claims['userId'],
             'responsableId': None
         }
+        
         dynamodb.Table(INCIDENTES_TABLE).put_item(Item=incidente)
         evento_id = str(uuid.uuid4())
         historial = {
@@ -73,7 +77,7 @@ def lambda_handler(event, context):
             'ubicacion': ubicacion,
             'tipo': tipo,
             'urgencia': urgencia,
-            'reportanteId': claims['userId'],
+            'reportanteId': auth['userId'],
             'fecha': now
         }))
         return response(200, {
