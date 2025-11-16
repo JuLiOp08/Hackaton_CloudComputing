@@ -203,16 +203,14 @@ resources:
         
   Outputs:
     ApiEndpoint:
-      Description: "API Gateway endpoint URL"
-      Value: !Sub "https://${AWS::ApiGateway::RestApi}.execute-api.${AWS::Region}.amazonaws.com/${self:provider.stage}"
+      Description: "API Gateway REST endpoint URL"
+      Value: 
+        Fn::Sub:
+          - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/${Stage}"
+          - Api:
+              Ref: ApiGatewayRestApi
+            Stage: ${self:provider.stage}
     
     WebSocketApiId:
       Description: "WebSocket API ID"
       Value: !Ref WebSocketApi
-
-plugins:
-  - serverless-python-requirements
-
-custom:
-  pythonRequirements:
-    dockerizePip: true
