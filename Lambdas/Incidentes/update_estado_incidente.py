@@ -11,7 +11,7 @@ INCIDENTES_TABLE = os.environ.get('INCIDENTES_TABLE')
 HISTORIAL_TABLE = os.environ.get('HISTORIAL_TABLE')
 SNS_TOPIC = os.environ.get('SNS_TOPIC')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
-VALID_STATES = ['pendiente', 'en_proceso', 'resuelto']
+VALID_STATES = ['pendiente', 'en proceso', 'resuelto']
 
 
 def lambda_handler(event, context):
