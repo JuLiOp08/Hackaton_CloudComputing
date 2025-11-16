@@ -50,21 +50,10 @@ Backend serverless para la gestión de incidentes universitarios, autenticación
 	- Headers: `Authorization: Bearer <token>`
 	- Response: `{ "success": true, "data": [ ...incidentes ] }`
 
-- **GET /incidentes/filtrar?urgencia=alta&tipo=Fuga de agua**
-	- Filtrar incidentes
-	- Headers: `Authorization: Bearer <token>`
-	- Response: `{ "success": true, "data": [ ...incidentes ] }`
-
 - **GET /incidentes/buscar?codigo_incidente=...**
 	- Obtener incidente por ID
 	- Headers: `Authorization: Bearer <token>`
 	- Response: `{ "success": true, "data": { ...incidente } }`
-
-- **POST /incidentes/reporte**
-	- Agregar reporte adicional
-	- Request: `{ "codigo_incidente": "...", "detalles": "Nota adicional" }`
-	- Headers: `Authorization: Bearer <token>`
-	- Response: `{ "success": true, "data": { "uuid_evento": "...", "tiempo": "..." } }`
 
 ### Historial
 - **GET /historial/listar?page=1&size=10**
@@ -84,18 +73,6 @@ Backend serverless para la gestión de incidentes universitarios, autenticación
 	- Headers: `Authorization: Bearer <token>`
 	- Response: `{ "success": true, "data": { "codigo_incidente": "...", "estado": "resuelto" } }`
 
-- **PUT /incidentes/asignar**
-	- Asignar responsable
-	- Request: `{ "codigo_incidente": "...", "responsableId": "..." }`
-	- Headers: `Authorization: Bearer <token>`
-	- Response: `{ "success": true, "data": { "codigo_incidente": "...", "responsableId": "..." } }`
-
-- **PUT /incidentes/reasignar**
-	- Reasignar responsable
-	- Request: `{ "codigo_incidente": "...", "responsableId": "..." }`
-	- Headers: `Authorization: Bearer <token>`
-	- Response: `{ "success": true, "data": { "codigo_incidente": "...", "responsableId": "..." } }`
-
 ## Seguridad y Roles
 - Todos los endpoints privados requieren JWT válido en el header Authorization.
 - El JWT debe contener: userId, email, role.
@@ -110,22 +87,9 @@ Backend serverless para la gestión de incidentes universitarios, autenticación
 - Fuga de agua
 - Piso mojado
 - Daño en utilería de salón
-  - Muebles dañados
-  - Enchufes dañados
-  - Dispositivos inteligentes dañados
-  - General (Para no obligar al usuario a tener un grado de especificación muy grande)
 - Daño infraestructura:
-  - Paredes, piso, techo dañados
-  - Ventanas que no abren o cierran
-  - Pizarra dañada
-  - General (Para no obligar al usuario a tener un grado de especificación muy grande)
 - Emergencia Medica
 - Baño dañado
-  - Sin agua
-  - Sin papel
-  - Cubiculos dañados
-  - Urinarios dañados
-  - General (Para no obligar al usuario a tener un grado de especificación muy grande)
 
 
 ## Notificaciones SNS
