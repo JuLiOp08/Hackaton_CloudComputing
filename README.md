@@ -3,19 +3,25 @@
 Backend serverless para la gestión de incidentes universitarios, autenticación, roles y notificaciones.
 
 ## Arquitectura
-- AWS Lambda (Python 3.12)
+- AWS Lambda (Python 3.13)
 - API Gateway REST
-- DynamoDB (Usuarios, Incidentes, Historial-Incidente)
+- DynamoDB (t_users, t_incidentes, t_historial)
 - SNS (Notificaciones)
 - JWT para autenticación
 - bcrypt para hashing
 
+## Lambdas Disponibles
+- **Auth**: register_user, login_user, validate_token
+- **Users**: get_user_by_id, list_users  
+- **Incidentes**: create_incidente, list_incidentes_activos, list_incidentes_admin, get_incidente_by_id, update_estado_incidente
+- **Historial**: list_historial, list_historial_by_incidente
+
 ## Endpoints REST
 
-### Usuarios
+### Autenticación
 - **POST /usuarios/registro**
-	- Registra usuario estudiante
-	- Request: `{ "email": "usuario@utec.edu.pe", "password": "123456", "nombre": "Juan" }`
+	- Registra usuario (estudiante o autoridad)
+	- Request: `{ "email": "usuario@utec.edu.pe", "password": "123456", "nombre": "Juan", "role": "estudiante" }`
 	- Response: `{ "success": true, "data": { "token": "..." } }`
 
 - **POST /usuarios/login**
@@ -23,6 +29,7 @@ Backend serverless para la gestión de incidentes universitarios, autenticación
 	- Request: `{ "email": "usuario@utec.edu.pe", "password": "123456" }`
 	- Response: `{ "success": true, "data": { "token": "..." } }`
 
+### Usuarios
 - **GET /usuarios/buscar?userId=...**
 	- Busca usuario por UUID
 	- Headers: `Authorization: Bearer <token>`
@@ -41,7 +48,7 @@ Backend serverless para la gestión de incidentes universitarios, autenticación
 	- Response: `{ "success": true, "data": { "codigo_incidente": "...", "estado": "pendiente", "fecha": "..." } }`
 
 - **GET /incidentes/activos**
-	- Listar incidentes activos
+	- Listar incidentes activos (pendiente, en_proceso)
 	- Headers: `Authorization: Bearer <token>`
 	- Response: `{ "success": true, "data": [ ...incidentes ] }`
 
@@ -55,6 +62,12 @@ Backend serverless para la gestión de incidentes universitarios, autenticación
 	- Headers: `Authorization: Bearer <token>`
 	- Response: `{ "success": true, "data": { ...incidente } }`
 
+- **PUT /incidentes/estado**
+	- Actualizar estado (solo autoridad)
+	- Request: `{ "codigo_incidente": "...", "estado": "resuelto" }`
+	- Headers: `Authorization: Bearer <token>`
+	- Response: `{ "success": true, "data": { "codigo_incidente": "...", "estado": "resuelto" } }`
+
 ### Historial
 - **GET /historial/listar?page=1&size=10**
 	- Listar historial completo (paginado)
@@ -66,37 +79,34 @@ Backend serverless para la gestión de incidentes universitarios, autenticación
 	- Headers: `Authorization: Bearer <token>`
 	- Response: `{ "success": true, "data": [ ...historial ] }`
 
-### Administrativas
-- **PUT /incidentes/estado**
-	- Actualizar estado
-	- Request: `{ "codigo_incidente": "...", "estado": "resuelto" }`
-	- Headers: `Authorization: Bearer <token>`
-	- Response: `{ "success": true, "data": { "codigo_incidente": "...", "estado": "resuelto" } }`
-
 ## Seguridad y Roles
 - Todos los endpoints privados requieren JWT válido en el header Authorization.
-- El JWT debe contener: userId, email, role.
-- Solo el rol "autoridad" puede listar usuarios y administrar incidentes.
+- El JWT contiene: userId, email, role, exp (48 horas).
+- Solo el rol "autoridad" puede administrar incidentes y listar usuarios.
 
 ## Tablas DynamoDB
-- **Usuarios**: email (PK), tenant_id (UUID), nombre, contraseña_hash, role, createdAt
-- **Incidentes**: codigo_incidente (PK), ubicacion, descripcion, estado, fecha, tipo, urgencia, imagen, reportanteId, responsableId
-- **Historial-Incidente**: codigo_incidente (PK), uuid_evento (SK), tiempo, encargado, estado, detalles
+- **t_users**: email (PK), tenant_id (UUID), nombre, contraseña_hash, role, createdAt
+- **t_incidentes**: codigo_incidente (PK), ubicacion, descripcion, estado, fecha, tipo, urgencia, imagen, reportanteId, responsableId
+- **t_historial**: codigo_incidente (PK), uuid_evento (SK), tiempo, encargado, estado, detalles
 
-## Tipos de Incidentes
+## Tipos de Incidentes Válidos
 - Fuga de agua
 - Piso mojado
 - Daño en utilería de salón
-- Daño infraestructura:
-- Emergencia Medica
+- Daño infraestructura
+- Objeto perdido
+- Emergencia médica
 - Baño dañado
 
+## Estados de Incidentes
+- **pendiente**: Recién creado, sin atender
+- **en_proceso**: Siendo atendido
+- **resuelto**: Completado y cerrado
 
 ## Notificaciones SNS
 - Al crear usuario
 - Al crear incidente (a administradores)
 - Al actualizar estado (al reportante)
-- Al resolver incidente (al reportante)
 
 ## Deploy
 1. Instala Serverless Framework

@@ -18,7 +18,7 @@ provider:
     JWT_SECRET: alerta-utec-secret-key-2024
 functions:
   register_user:
-    handler: register_user.lambda_handler
+    handler: Lambdas/Auth/register_user.lambda_handler
     package:
       include:
         - ./**  # Incluir todo el contenido del directorio
@@ -30,7 +30,7 @@ functions:
           integration: lambda
   
   login_user:
-    handler: login_user.lambda_handler
+    handler: Lambdas/Auth/login_user.lambda_handler
     package:
       include:
         - ./**
@@ -42,7 +42,7 @@ functions:
           integration: lambda
   
   get_user_by_id:
-    handler: get_user_by_id.lambda_handler
+    handler: Lambdas/User/get_user_by_id.lambda_handler
     package:
       include:
         - ./**
@@ -54,7 +54,7 @@ functions:
           integration: lambda
   
   list_users:
-    handler: list_users.lambda_handler
+    handler: Lambdas/User/list_users.lambda_handler
     package:
       include:
         - ./**
@@ -66,7 +66,7 @@ functions:
           integration: lambda
   
   create_incidente:
-    handler: create_incidente.lambda_handler
+    handler: Lambdas/Incidentes/create_incidente.lambda_handler
     package:
       include:
         - ./**
@@ -78,7 +78,7 @@ functions:
           integration: lambda
   
   list_incidentes_activos:
-    handler: list_incidentes_activos.lambda_handler
+    handler: Lambdas/Incidentes/list_incidentes_activos.lambda_handler
     package:
       include:
         - ./**
@@ -90,7 +90,7 @@ functions:
           integration: lambda
   
   list_incidentes_admin:
-    handler: list_incidentes_admin.lambda_handler
+    handler: Lambdas/Incidentes/list_incidentes_admin.lambda_handler
     package:
       include:
         - ./**
@@ -102,7 +102,7 @@ functions:
           integration: lambda
   
   filter_incidentes:
-    handler: filter_incidentes.lambda_handler
+    handler: Lambdas/Incidentes/filter_incidentes.lambda_handler
     package:
       include:
         - ./**
@@ -114,7 +114,7 @@ functions:
           integration: lambda
   
   get_incidente_by_id:
-    handler: get_incidente_by_id.lambda_handler
+    handler: Lambdas/Incidentes/get_incidente_by_id.lambda_handler
     package:
       include:
         - ./**
@@ -126,7 +126,7 @@ functions:
           integration: lambda
   
   add_reporte_incidente:
-    handler: add_reporte_incidente.lambda_handler
+    handler: Lambdas/Incidentes/add_reporte_incidente.lambda_handler
     package:
       include:
         - ./**
@@ -138,7 +138,7 @@ functions:
           integration: lambda
   
   list_historial:
-    handler: list_historial.lambda_handler
+    handler: Lambdas/Historial/list_historial.lambda_handler
     package:
       include:
         - ./**
@@ -150,7 +150,7 @@ functions:
           integration: lambda
   
   list_historial_by_incidente:
-    handler: list_historial_by_incidente.lambda_handler
+    handler: Lambdas/Historial/list_historial_by_incidente.lambda_handler
     package:
       include:
         - ./**
@@ -162,7 +162,7 @@ functions:
           integration: lambda
   
   update_estado_incidente:
-    handler: update_estado_incidente.lambda_handler
+    handler: Lambdas/Incidentes/update_estado_incidente.lambda_handler
     package:
       include:
         - ./**
@@ -174,7 +174,7 @@ functions:
           integration: lambda
   
   asignar_responsable:
-    handler: asignar_responsable.lambda_handler
+    handler: Lambdas/Incidentes/asignar_responsable.lambda_handler
     package:
       include:
         - ./**
@@ -186,7 +186,7 @@ functions:
           integration: lambda
   
   reasignar_responsable:
-    handler: reasignar_responsable.lambda_handler
+    handler: Lambdas/Incidentes/reasignar_responsable.lambda_handler
     package:
       include:
         - ./**
