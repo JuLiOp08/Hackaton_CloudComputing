@@ -14,12 +14,22 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 
 INSTITUTIONAL_DOMAIN = "utec.edu.pe"
 
+
+def get_body(event):
+    body = event.get('body', '{}')
+    if isinstance(body, dict):
+        return body
+    try:
+        return json.loads(body)
+    except Exception:
+        return {}
+
 def is_institutional_email(email):
     return email.endswith(f"@{INSTITUTIONAL_DOMAIN}")
 
 def lambda_handler(event, context):
     try:
-        body = json.loads(event.get('body', '{}'))
+        body = get_body(event)
         email = body.get('email')
         password = body.get('password')
         nombre = body.get('nombre')

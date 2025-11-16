@@ -12,6 +12,18 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 def lambda_handler(event, context):
     try:
         body = json.loads(event.get('body', '{}'))
+def get_body(event):
+    body = event.get('body', '{}')
+    if isinstance(body, dict):
+        return body
+    try:
+        return json.loads(body)
+    except Exception:
+        return {}
+
+def lambda_handler(event, context):
+    try:
+        body = get_body(event)
         email = body.get('email')
         password = body.get('password')
         

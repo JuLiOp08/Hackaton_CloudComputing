@@ -23,6 +23,22 @@ def lambda_handler(event, context):
             return response(403, "No autorizado - se requiere rol de autoridad o personal admin")
         
         body = json.loads(event.get('body', '{}'))
+def get_body(event):
+    body = event.get('body', '{}')
+    if isinstance(body, dict):
+        return body
+    try:
+        return json.loads(body)
+    except Exception:
+        return {}
+
+def lambda_handler(event, context):
+    try:
+        auth = event["requestContext"]["authorizer"]
+        user_id = auth['userId']
+        if auth["context"]["role"] not in ["autoridad", "personal_admin"]:
+            return response(403, "No autorizado - se requiere rol de autoridad o personal admin")
+        body = get_body(event)
         codigo_incidente = body.get('codigo_incidente')
         nuevo_estado = body.get('estado')
         
