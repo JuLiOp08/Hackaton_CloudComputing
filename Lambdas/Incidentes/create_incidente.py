@@ -95,6 +95,7 @@ def lambda_handler(event, context):
     
     except Exception as e:
         print(f"Error invocando notificación: {str(e)}")
+        return response(500, str(e))
         
     return response(200, {
         'codigo_incidente': codigo_incidente,
