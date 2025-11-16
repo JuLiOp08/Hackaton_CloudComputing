@@ -200,17 +200,3 @@ resources:
       Properties:
         TopicName: AlertaUTEC
         DisplayName: Notificaciones AlertaUTEC
-        
-  Outputs:
-    ApiEndpoint:
-      Description: "API Gateway REST endpoint URL"
-      Value: 
-        Fn::Sub:
-          - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/${Stage}"
-          - Api:
-              Ref: ApiGatewayRestApi
-            Stage: ${self:provider.stage}
-    
-    WebSocketApiId:
-      Description: "WebSocket API ID"
-      Value: !Ref WebSocketApi
