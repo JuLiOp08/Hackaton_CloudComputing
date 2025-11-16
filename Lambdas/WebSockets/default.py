@@ -36,7 +36,7 @@ def handler(event, context):
         connection = table.get_item(Key={'connectionId': connection_id}).get('Item')
         
         if not connection or not connection.get('authenticated'):
-            print(f"❌ Conexión no autenticada: {connection_id}")
+            print(f"Conexión no autenticada: {connection_id}")
             return {'statusCode': 401, 'body': 'No autenticado'}
         
         user_id = connection['userId']
@@ -46,9 +46,8 @@ def handler(event, context):
         body = json.loads(event.get('body', '{}'))
         action = body.get('action')
         
-        print(f{user_role} {user_email}: {action}")
+        print(f"{user_role} {user_email}: {action}")
         
-        # ACCIONES GENERALES (todos los roles)
         if action == 'ping':
             send_to_connection(connection_id, {
                 'action': 'pong',
@@ -57,33 +56,33 @@ def handler(event, context):
             }, event)
             
         elif action == 'get_incidents':
-            await handle_get_incidents(connection_id, user_role, body, event)
+            handle_get_incidents(connection_id, user_role, body, event)
             
         elif action == 'subscribe_incidents':
-            await handle_subscribe_incidents(connection_id, user_role, body, event)
+            handle_subscribe_incidents(connection_id, user_role, body, event)
         
         # DASHBOARD ADMINISTRATIVO (solo autoridades y personal administrativo)
         elif action == 'get_dashboard':
-            await handle_get_dashboard(connection_id, user_role, body, event)
+            handle_get_dashboard(connection_id, user_role, body, event)
             
         elif action == 'subscribe_dashboard':
-            await handle_subscribe_dashboard(connection_id, user_role, body, event)
+            handle_subscribe_dashboard(connection_id, user_role, body, event)
             
         elif action == 'get_stats':
-            await handle_get_stats(connection_id, user_role, body, event)
+            handle_get_stats(connection_id, user_role, body, event)
             
         elif action == 'get_users':
-            await handle_get_users(connection_id, user_role, body, event)
+            handle_get_users(connection_id, user_role, body, event)
         
         # GESTIÓN DE INCIDENTES (solo autoridades)
         elif action == 'update_incident_status':
-            await handle_update_status(connection_id, user_role, user_id, body, event)
+            handle_update_status(connection_id, user_role, user_id, body, event)
             
         elif action == 'assign_incident':
-            await handle_assign_incident(connection_id, user_role, user_id, body, event)
+            handle_assign_incident(connection_id, user_role, user_id, body, event)
             
         elif action == 'get_incident_history':
-            await handle_get_incident_history(connection_id, user_role, body, event)
+            handle_get_incident_history(connection_id, user_role, body, event)
         
         else:
             send_to_connection(connection_id, {
@@ -99,7 +98,7 @@ def handler(event, context):
         return {'statusCode': 500, 'body': 'Error interno del servidor'}
 
 
-async def handle_get_incidents(connection_id, user_role, body, event):
+def handle_get_incidents(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
     """Obtener incidentes según el rol del usuario"""
     incidentes_table = dynamodb.Table(INCIDENTES_TABLE)
     
@@ -148,7 +147,7 @@ async def handle_get_incidents(connection_id, user_role, body, event):
             'message': 'Error al obtener incidentes'
         }, event)
 
-async def handle_subscribe_incidents(connection_id, user_role, body, event):
+def handle_subscribe_incidents(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
     """Suscribirse a updates de incidentes"""
     table = dynamodb.Table(CONNECTIONS_TABLE)
     
@@ -160,7 +159,7 @@ async def handle_subscribe_incidents(connection_id, user_role, body, event):
     
     if user_role == 'estudiante':
         subscription_data['incidentStates'] = ['en proceso']
-    elif user_role == 'personal':
+    elif user_role == 'personal_admin':  # ✅ CORREGIDO: 'personal' → 'personal_admin'
         subscription_data['incidentStates'] = ['pendiente', 'en proceso']
     else:
         subscription_data['incidentStates'] = ['pendiente', 'en proceso', 'resuelto']
@@ -182,8 +181,8 @@ async def handle_subscribe_incidents(connection_id, user_role, body, event):
         'subscriptionData': subscription_data
     }, event)
 
-async def handle_get_dashboard(connection_id, user_role, body, event):
-    if user_role not in ['autoridad', 'personal']:
+def handle_get_dashboard(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
+    if user_role not in ['autoridad', 'personal_admin']:  # ✅ CORREGIDO: 'personal' → 'personal_admin'
         send_to_connection(connection_id, {
             'action': 'error',
             'message': 'No autorizado para acceder al dashboard'
@@ -253,8 +252,8 @@ async def handle_get_dashboard(connection_id, user_role, body, event):
             'message': 'Error al cargar el dashboard'
         }, event)
 
-async def handle_subscribe_dashboard(connection_id, user_role, body, event):
-    if user_role not in ['autoridad', 'personal']:
+def handle_subscribe_dashboard(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
+    if user_role not in ['autoridad', 'personal_admin']:  # ✅ CORREGIDO: 'personal' → 'personal_admin'
         send_to_connection(connection_id, {
             'action': 'error',
             'message': 'No autorizado para suscribirse al dashboard'
@@ -280,8 +279,8 @@ async def handle_subscribe_dashboard(connection_id, user_role, body, event):
         'timestamp': datetime.utcnow().isoformat()
     }, event)
 
-async def handle_get_stats(connection_id, user_role, body, event):
-    if user_role not in ['autoridad', 'personal']:
+def handle_get_stats(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
+    if user_role not in ['autoridad', 'personal_admin']:  # ✅ CORREGIDO: 'personal' → 'personal_admin'
         send_to_connection(connection_id, {
             'action': 'error',
             'message': 'No autorizado para ver estadísticas'
@@ -342,7 +341,7 @@ async def handle_get_stats(connection_id, user_role, body, event):
             'message': 'Error al cargar estadísticas'
         }, event)
 
-async def handle_get_users(connection_id, user_role, body, event):
+def handle_get_users(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
     """Obtener lista de usuarios - SOLO AUTORIDADES"""
     if user_role != 'autoridad':
         send_to_connection(connection_id, {
@@ -380,7 +379,7 @@ async def handle_get_users(connection_id, user_role, body, event):
             'message': 'Error al cargar lista de usuarios'
         }, event)
 
-async def handle_get_incident_history(connection_id, user_role, body, event):
+def handle_get_incident_history(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
     incident_id = body.get('incident_id')
     
     if not incident_id:
@@ -415,3 +414,18 @@ async def handle_get_incident_history(connection_id, user_role, body, event):
             'action': 'error',
             'message': 'Error al cargar historial del incidente'
         }, event)
+
+# ✅ CORREGIDO: Agregar las funciones que faltaban
+def handle_update_status(connection_id, user_role, user_id, body, event):
+    """Función placeholder para update_incident_status"""
+    send_to_connection(connection_id, {
+        'action': 'error',
+        'message': 'Función handle_update_status no implementada'
+    }, event)
+
+def handle_assign_incident(connection_id, user_role, user_id, body, event):
+    """Función placeholder para assign_incident"""
+    send_to_connection(connection_id, {
+        'action': 'error', 
+        'message': 'Función handle_assign_incident no implementada'
+    }, event)
