@@ -11,7 +11,7 @@ def lambda_handler(event, context):
     try:
         auth = event["requestContext"]["authorizer"]
 
-        if auth["context"]["role"] != "autoridad" or auth["context"]["role"] != personal_admin:
+        if auth["context"]["role"] != "autoridad":
             return response(403, "No autorizado - se requiere rol de autorizacion")
         
         params = event.get('queryStringParameters') or {}
