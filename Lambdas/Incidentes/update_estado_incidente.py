@@ -49,16 +49,33 @@ def lambda_handler(event, context):
         }
         dynamodb.Table(HISTORIAL_TABLE).put_item(Item=historial)
         
-        sns.publish(TopicArn=SNS_TOPIC, Message=json.dumps({
-            'evento': 'estado_actualizado',
-            'codigo_incidente': codigo_incidente,
-            'nuevo_estado': nuevo_estado,
-            'reportanteId': incidente['reportanteId'],
-            'fecha': now
-        }))
-        return response(200, {'codigo_incidente': codigo_incidente, 'estado': nuevo_estado})
     except Exception as e:
         return response(500, str(e))
+
+    try:
+        lambda_client = boto3.client('lambda')
+        
+        lambda_client.invoke(
+            FunctionName='notify_handler',
+            InvocationType='Event',
+            Payload=json.dumps({
+                'action': 'status_changed',
+                'incident': {
+                    'codigo_incidente': codigo_incidente,
+                    'uuid_evento': evento_id,
+                    'tiempo': now,
+                    'encargado': claims['userId'],
+                    'estado': nuevo_estado,
+                    'detalles': f'Estado actualizado a {nuevo_estado}'
+                },
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        )
+    except Exception as e:
+        print(f"Error invocando notificación: {str(e)}")
+        return response(500, str(e))
+
+    return response(200, {'codigo_incidente': codigo_incidente, 'estado': nuevo_estado})
 
 def response(code, body):
     return {
