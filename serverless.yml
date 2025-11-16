@@ -1,0 +1,248 @@
+org: julio123
+service: alerta-utec
+
+provider:
+  name: aws
+  runtime: python3.13
+  # Default memory size for functions (default: 1024MB)
+  memorySize: 1024
+  timeout: 20
+  iam:
+    role: arn:aws:iam::374906019640:role/LabRole
+  environment:
+    USERS_TABLE: Usuarios
+    INCIDENTES_TABLE: Incidentes
+    HISTORIAL_TABLE: HistorialIncidente
+    SNS_TOPIC: !Ref AlertaUTECSNSTopic
+    JWT_SECRET: alerta-utec-secret-key-2024
+functions:
+  register_user:
+    handler: register_user.lambda_handler
+    package:
+      include:
+        - ./**  # Incluir todo el contenido del directorio
+    events:
+      - http:
+          path: /usuarios/registro
+          method: post
+          cors: true
+          integration: lambda
+  
+  login_user:
+    handler: login_user.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /usuarios/login
+          method: post
+          cors: true
+          integration: lambda
+  
+  get_user_by_id:
+    handler: get_user_by_id.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /usuarios/buscar
+          method: get
+          cors: true
+          integration: lambda
+  
+  list_users:
+    handler: list_users.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /usuarios/listar
+          method: get
+          cors: true
+          integration: lambda
+  
+  create_incidente:
+    handler: create_incidente.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /incidentes/crear
+          method: post
+          cors: true
+          integration: lambda
+  
+  list_incidentes_activos:
+    handler: list_incidentes_activos.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /incidentes/activos
+          method: get
+          cors: true
+          integration: lambda
+  
+  list_incidentes_admin:
+    handler: list_incidentes_admin.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /incidentes/admin
+          method: get
+          cors: true
+          integration: lambda
+  
+  filter_incidentes:
+    handler: filter_incidentes.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /incidentes/filtrar
+          method: get
+          cors: true
+          integration: lambda
+  
+  get_incidente_by_id:
+    handler: get_incidente_by_id.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /incidentes/buscar
+          method: get
+          cors: true
+          integration: lambda
+  
+  add_reporte_incidente:
+    handler: add_reporte_incidente.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /incidentes/reporte
+          method: post
+          cors: true
+          integration: lambda
+  
+  list_historial:
+    handler: list_historial.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /historial/listar
+          method: get
+          cors: true
+          integration: lambda
+  
+  list_historial_by_incidente:
+    handler: list_historial_by_incidente.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /historial/incidente
+          method: get
+          cors: true
+          integration: lambda
+  
+  update_estado_incidente:
+    handler: update_estado_incidente.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /incidentes/estado
+          method: put
+          cors: true
+          integration: lambda
+  
+  asignar_responsable:
+    handler: asignar_responsable.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /incidentes/asignar
+          method: put
+          cors: true
+          integration: lambda
+  
+  reasignar_responsable:
+    handler: reasignar_responsable.lambda_handler
+    package:
+      include:
+        - ./**
+    events:
+      - http:
+          path: /incidentes/reasignar
+          method: put
+          cors: true
+          integration: lambda
+resources:
+  Resources:
+    # Tabla de Usuarios
+    UsuariosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Usuarios
+        AttributeDefinitions:
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: email
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    # Tabla de Incidentes
+    IncidentesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Incidentes
+        AttributeDefinitions:
+          - AttributeName: codigo_incidente
+            AttributeType: S
+        KeySchema:
+          - AttributeName: codigo_incidente
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    # Tabla de Historial de Incidentes
+    HistorialIncidenteTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: HistorialIncidente
+        AttributeDefinitions:
+          - AttributeName: codigo_incidente
+            AttributeType: S
+          - AttributeName: uuid_evento
+            AttributeType: S
+        KeySchema:
+          - AttributeName: codigo_incidente
+            KeyType: HASH
+          - AttributeName: uuid_evento
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+    # SNS Topic para AlertaUTEC
+    AlertaUTECSNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: AlertaUTEC
+        DisplayName: Notificaciones AlertaUTEC
