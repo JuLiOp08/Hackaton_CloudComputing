@@ -60,6 +60,12 @@ def handler(event, context):
             
         elif action == 'subscribe_incidents':
             handle_subscribe_incidents(connection_id, user_role, body, event)
+
+        elif action == 'get_active_incidents':
+            handle_get_active_incidents(connection_id, user_role, event)
+            
+        elif action == 'get_all_incidents':
+            handle_get_all_incidents(connection_id, user_role, event)
         
         # DASHBOARD ADMINISTRATIVO (solo autoridades y personal administrativo)
         elif action == 'get_dashboard':
@@ -98,7 +104,70 @@ def handler(event, context):
         return {'statusCode': 500, 'body': 'Error interno del servidor'}
 
 
-def handle_get_incidents(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
+def handle_get_active_incidents(connection_id, user_role, event):
+    """Obtener incidentes activos (pendiente + en proceso) - Para todos los usuarios"""
+    try:
+        incidentes_table = dynamodb.Table(INCIDENTES_TABLE)
+        
+        scan = incidentes_table.scan(
+            FilterExpression='estado IN (:p, :e)',
+            ExpressionAttributeValues={
+                ':p': 'pendiente', 
+                ':e': 'en proceso'
+            }
+        )
+        incidentes = scan.get('Items', [])
+        
+        incidentes.sort(key=lambda x: x.get('fecha', ''), reverse=True)
+        
+        send_to_connection(connection_id, {
+            'action': 'active_incidents_data',
+            'incidents': incidentes,
+            'total': len(incidentes),
+            'userRole': user_role,
+            'timestamp': datetime.utcnow().isoformat()
+        }, event)
+        
+    except Exception as e:
+        print(f"Error obteniendo incidentes activos: {str(e)}")
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'Error al obtener incidentes activos'
+        }, event)
+
+def handle_get_all_incidents(connection_id, user_role, event):
+    """Obtener TODOS los incidentes - Solo para autoridades"""
+    try:
+        if user_role != 'autoridad':
+            send_to_connection(connection_id, {
+                'action': 'error',
+                'message': 'No autorizado - se requiere rol de autoridad'
+            }, event)
+            return
+        
+        incidentes_table = dynamodb.Table(INCIDENTES_TABLE)
+        
+        scan = incidentes_table.scan()
+        incidentes = scan.get('Items', [])
+        
+        incidentes.sort(key=lambda x: x.get('fecha', ''), reverse=True)
+        
+        send_to_connection(connection_id, {
+            'action': 'all_incidents_data',
+            'incidents': incidentes,
+            'total': len(incidentes),
+            'userRole': user_role,
+            'timestamp': datetime.utcnow().isoformat()
+        }, event)
+        
+    except Exception as e:
+        print(f"Error obteniendo todos los incidentes: {str(e)}")
+        send_to_connection(connection_id, {
+            'action': 'error',
+            'message': 'Error al obtener incidentes'
+        }, event)
+
+def handle_get_incidents(connection_id, user_role, body, event):
     """Obtener incidentes según el rol del usuario"""
     incidentes_table = dynamodb.Table(INCIDENTES_TABLE)
     
@@ -147,7 +216,7 @@ def handle_get_incidents(connection_id, user_role, body, event):  # ✅ CORREGID
             'message': 'Error al obtener incidentes'
         }, event)
 
-def handle_subscribe_incidents(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
+def handle_subscribe_incidents(connection_id, user_role, body, event):
     """Suscribirse a updates de incidentes"""
     table = dynamodb.Table(CONNECTIONS_TABLE)
     
@@ -181,8 +250,8 @@ def handle_subscribe_incidents(connection_id, user_role, body, event):  # ✅ CO
         'subscriptionData': subscription_data
     }, event)
 
-def handle_get_dashboard(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
-    if user_role not in ['autoridad', 'personal_admin']:  # ✅ CORREGIDO: 'personal' → 'personal_admin'
+def handle_get_dashboard(connection_id, user_role, body, event):
+    if user_role not in ['autoridad', 'personal_admin']:
         send_to_connection(connection_id, {
             'action': 'error',
             'message': 'No autorizado para acceder al dashboard'
@@ -252,8 +321,8 @@ def handle_get_dashboard(connection_id, user_role, body, event):  # ✅ CORREGID
             'message': 'Error al cargar el dashboard'
         }, event)
 
-def handle_subscribe_dashboard(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
-    if user_role not in ['autoridad', 'personal_admin']:  # ✅ CORREGIDO: 'personal' → 'personal_admin'
+def handle_subscribe_dashboard(connection_id, user_role, body, event):
+    if user_role not in ['autoridad', 'personal_admin']:
         send_to_connection(connection_id, {
             'action': 'error',
             'message': 'No autorizado para suscribirse al dashboard'
@@ -279,8 +348,8 @@ def handle_subscribe_dashboard(connection_id, user_role, body, event):  # ✅ CO
         'timestamp': datetime.utcnow().isoformat()
     }, event)
 
-def handle_get_stats(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
-    if user_role not in ['autoridad', 'personal_admin']:  # ✅ CORREGIDO: 'personal' → 'personal_admin'
+def handle_get_stats(connection_id, user_role, body, event):
+    if user_role not in ['autoridad', 'personal_admin']:
         send_to_connection(connection_id, {
             'action': 'error',
             'message': 'No autorizado para ver estadísticas'
@@ -341,7 +410,7 @@ def handle_get_stats(connection_id, user_role, body, event):  # ✅ CORREGIDO: a
             'message': 'Error al cargar estadísticas'
         }, event)
 
-def handle_get_users(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
+def handle_get_users(connection_id, user_role, body, event):
     """Obtener lista de usuarios - SOLO AUTORIDADES"""
     if user_role != 'autoridad':
         send_to_connection(connection_id, {
@@ -379,7 +448,7 @@ def handle_get_users(connection_id, user_role, body, event):  # ✅ CORREGIDO: a
             'message': 'Error al cargar lista de usuarios'
         }, event)
 
-def handle_get_incident_history(connection_id, user_role, body, event):  # ✅ CORREGIDO: async removido
+def handle_get_incident_history(connection_id, user_role, body, event):
     incident_id = body.get('incident_id')
     
     if not incident_id:
