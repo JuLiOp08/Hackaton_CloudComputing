@@ -72,6 +72,29 @@ def lambda_handler(event, context):
 
     except Exception as e:
         return response(500, str(e))
+
+    try:
+        lambda_client = boto3.client('lambda')
+        
+        lambda_client.invoke(
+            FunctionName='alerta-utec-dev-notifyHandler',
+            InvocationType='Event',
+            Payload=json.dumps({
+                'action': 'new_incident',
+                'incident': {
+                    'codigo_incidente': codigo_incidente,
+                    'ubicacion': ubicacion,
+                    'tipo': tipo,
+                    'urgencia': urgencia,
+                    'reportanteId': auth['userId'],
+                    'fecha': now
+                },
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        )
+    
+    except Exception as e:
+        print(f"Error invocando notificación: {str(e)}")
         
     return response(200, {
         'codigo_incidente': codigo_incidente,
