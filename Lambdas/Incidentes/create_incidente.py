@@ -3,7 +3,6 @@ import boto3
 import uuid
 import jwt
 import os
-import time
 from datetime import datetime
 
 def get_body(event):
@@ -14,6 +13,21 @@ def get_body(event):
         return json.loads(body)
     except Exception:
         return {}
+
+def verify_jwt_token(event):
+    """Verifica el token JWT del header Authorization"""
+    try:
+        headers = event.get('headers', {})
+        auth_header = headers.get('Authorization') or headers.get('authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return None
+        token = auth_header.split(' ')[1]
+        decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+        if 'exp' in decoded and datetime.fromtimestamp(decoded['exp']) < datetime.utcnow():
+            return None
+        return decoded
+    except:
+        return None
 
 dynamodb = boto3.resource('dynamodb')
 sns = boto3.client('sns')
@@ -29,9 +43,12 @@ VALID_PLACES = ["aula", "cocina", "biblioteca", "laboratorio", "comedor", "canch
 
 def lambda_handler(event, context):
     try:
-        auth = event["requestContext"]["authorizer"]
-        
-        body = json.loads(event.get('body', '{}'))
+        # Verificar token JWT
+        user_data = verify_jwt_token(event)
+        if not user_data:
+            return response(401, "Token inválido o expirado")
+            
+        body = get_body(event)
         ubicacion = body.get('ubicacion')
         descripcion = body.get('descripcion')
         tipo = body.get('tipo')
@@ -46,7 +63,7 @@ def lambda_handler(event, context):
             return response(400, "Tipo de incidente inválido")
 
         if lugar not in VALID_PLACES:
-            return response(400, "Lugar del incidente invalido")
+            return response(400, "Lugar del incidente inválido")
             
         codigo_incidente = str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
@@ -60,7 +77,7 @@ def lambda_handler(event, context):
             'lugar': lugar,
             'urgencia': urgencia,
             'imagen': imagen if imagen else None,
-            'reportanteId': auth['userId'],
+            'reportanteId': user_data['userId'],
             'responsableId': None
         }
         
@@ -75,6 +92,19 @@ def lambda_handler(event, context):
             'detalles': 'Incidente creado'
         }
         dynamodb.Table(HISTORIAL_TABLE).put_item(Item=historial)
+        dynamodb.Table(INCIDENTES_TABLE).put_item(Item=incidente)
+        
+        evento_id = str(uuid.uuid4())
+        historial = {
+            'codigo_incidente': codigo_incidente,
+            'uuid_evento': evento_id,
+            'tiempo': now,
+            'encargado': user_data['userId'],
+            'estado': 'pendiente',
+            'detalles': 'Incidente creado'
+        }
+        dynamodb.Table(HISTORIAL_TABLE).put_item(Item=historial)
+        
         sns.publish(TopicArn=SNS_TOPIC, Message=json.dumps({
             'evento': 'incidente_creado',
             'codigo_incidente': codigo_incidente,
@@ -82,42 +112,40 @@ def lambda_handler(event, context):
             'tipo': tipo,
             'lugar': lugar,
             'urgencia': urgencia,
-            'reportanteId': auth['userId'],
+            'reportanteId': user_data['userId'],
             'fecha': now
         }))
 
+        try:
+            lambda_client = boto3.client('lambda')
+            lambda_client.invoke(
+                FunctionName='alerta-utec-dev-notifyHandler',
+                InvocationType='Event',
+                Payload=json.dumps({
+                    'action': 'new_incident',
+                    'incident': {
+                        'codigo_incidente': codigo_incidente,
+                        'ubicacion': ubicacion,
+                        'tipo': tipo,
+                        'lugar': lugar,
+                        'urgencia': urgencia,
+                        'reportanteId': user_data['userId'],
+                        'fecha': now
+                    },
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+            )
+        except Exception as e:
+            print(f"Error invocando notificación: {str(e)}")
+        
+        return response(200, {
+            'codigo_incidente': codigo_incidente,
+            'estado': 'pendiente',
+            'fecha': now
+        })
+        
     except Exception as e:
         return response(500, str(e))
-
-    try:
-        lambda_client = boto3.client('lambda')
-        
-        lambda_client.invoke(
-            FunctionName='alerta-utec-dev-notifyHandler',
-            InvocationType='Event',
-            Payload=json.dumps({
-                'action': 'new_incident',
-                'incident': {
-                    'codigo_incidente': codigo_incidente,
-                    'ubicacion': ubicacion,
-                    'tipo': tipo,
-                    'lugar': lugar,
-                    'urgencia': urgencia,
-                    'reportanteId': auth['userId'],
-                    'fecha': now
-                },
-                'timestamp': datetime.utcnow().isoformat()
-            })
-        )
-    
-    except Exception as e:
-        print(f"Error invocando notificación: {str(e)}")
-        
-    return response(200, {
-        'codigo_incidente': codigo_incidente,
-        'estado': 'pendiente',
-        'fecha': now
-    })
 
 def response(code, body):
     return {

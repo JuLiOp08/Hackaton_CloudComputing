@@ -2,17 +2,36 @@ import json
 import boto3
 import jwt
 import os
+from datetime import datetime
 
 dynamodb = boto3.resource('dynamodb')
 USERS_TABLE = os.environ.get('USERS_TABLE')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 
+def verify_jwt_token(event):
+    """Verifica el token JWT del header Authorization"""
+    try:
+        headers = event.get('headers', {})
+        auth_header = headers.get('Authorization') or headers.get('authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return None
+        token = auth_header.split(' ')[1]
+        decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+        if 'exp' in decoded and datetime.fromtimestamp(decoded['exp']) < datetime.utcnow():
+            return None
+        return decoded
+    except:
+        return None
+
 def lambda_handler(event, context):
     try:
-        auth = event["requestContext"]["authorizer"]
-
-        if auth["context"]["role"] != "autoridad":
-            return response(403, "No autorizado - se requiere rol de autorizacion")
+        # Verificar token JWT
+        user_data = verify_jwt_token(event)
+        if not user_data:
+            return response(401, "Token inválido o expirado")
+            
+        if user_data.get('role') != 'autoridad':
+            return response(403, "No autorizado - se requiere rol de autoridad")
         
         params = event.get('queryStringParameters') or {}
         user_id = params.get('userId')
@@ -26,7 +45,8 @@ def lambda_handler(event, context):
         if not items:
             return response(404, "Usuario no encontrado")
         user = items[0]
-        del user['contraseña_hash']
+        if 'contraseña_hash' in user:
+            del user['contraseña_hash']
         return response(200, user)
     except Exception as e:
         return response(500, str(e))

@@ -11,21 +11,8 @@ INCIDENTES_TABLE = os.environ.get('INCIDENTES_TABLE')
 HISTORIAL_TABLE = os.environ.get('HISTORIAL_TABLE')
 SNS_TOPIC = os.environ.get('SNS_TOPIC')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
-VALID_STATES = ['pendiente', 'en proceso', 'resuelto']
+VALID_STATES = ['pendiente', 'en_proceso', 'resuelto']
 
-
-def lambda_handler(event, context):
-    try:
-        auth = event["requestContext"]["authorizer"]
-        user_id = auth['userId']
-        
-        if auth["context"]["role"] not in ["autoridad", "personal_admin"]:
-            return response(403, "No autorizado - se requiere rol de autoridad o personal admin")
-        
-        body = json.loads(event.get('body', '{}'))
-    except Exception as e:
-        return response(500, f"Error interno: {e}")
-        
 def get_body(event):
     body = event.get('body', '{}')
     if isinstance(body, dict):
@@ -35,12 +22,31 @@ def get_body(event):
     except Exception:
         return {}
 
+def verify_jwt_token(event):
+    """Verifica el token JWT del header Authorization"""
+    try:
+        headers = event.get('headers', {})
+        auth_header = headers.get('Authorization') or headers.get('authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return None
+        token = auth_header.split(' ')[1]
+        decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+        if 'exp' in decoded and datetime.fromtimestamp(decoded['exp']) < datetime.utcnow():
+            return None
+        return decoded
+    except:
+        return None
+
 def lambda_handler(event, context):
     try:
-        auth = event["requestContext"]["authorizer"]
-        user_id = auth['userId']
-        if auth["context"]["role"] not in ["autoridad", "personal_admin"]:
+        # Verificar token JWT
+        user_data = verify_jwt_token(event)
+        if not user_data:
+            return response(401, "Token inválido o expirado")
+            
+        if user_data.get('role') not in ['autoridad', 'personal_admin']:
             return response(403, "No autorizado - se requiere rol de autoridad o personal admin")
+            
         body = get_body(event)
         codigo_incidente = body.get('codigo_incidente')
         nuevo_estado = body.get('estado')
@@ -66,7 +72,7 @@ def lambda_handler(event, context):
             'codigo_incidente': codigo_incidente,
             'uuid_evento': evento_id,
             'tiempo': now,
-            'encargado': user_id,
+            'encargado': user_data['userId'],
             'estado': nuevo_estado,
             'detalles': f'Estado actualizado a {nuevo_estado}'
         }
@@ -91,7 +97,7 @@ def lambda_handler(event, context):
                         'codigo_incidente': codigo_incidente,
                         'estado': nuevo_estado,
                         'reportanteId': incidente['reportanteId'],
-                        'updatedBy': user_id
+                        'updatedBy': user_data['userId']
                     },
                     'timestamp': now
                 })

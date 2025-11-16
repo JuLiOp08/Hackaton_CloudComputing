@@ -1,65 +1,19 @@
 {
 	"info": {
-		"_postman_id": "alerta-utec-collection",
 		"name": "AlertaUTEC API",
-		"description": "Colección para testing del backend AlertaUTEC - Sistema de gestión de incidentes universitarios",
+		"description": "Colección actualizada para testing del backend AlertaUTEC - Sistema de gestión de incidentes universitarios",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
-	"auth": {
-		"type": "bearer",
-		"bearer": [
-			{
-				"key": "token",
-				"value": "{{jwt_token}}",
-				"type": "string"
-			}
-		]
-	},
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					""
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					""
-				]
-			}
-		}
-	],
 	"variable": [
 		{
 			"key": "base_url",
-			"value": "https://your-api-id.execute-api.us-east-1.amazonaws.com/dev",
-			"type": "string"
-		},
-		{
-			"key": "jwt_token",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "user_id",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "codigo_incidente",
-			"value": "",
+			"value": "https://tu-api-gateway.execute-api.us-east-1.amazonaws.com/dev",
 			"type": "string"
 		}
 	],
 	"item": [
 		{
-			"name": "Usuarios",
+			"name": "Auth - Usuarios",
 			"item": [
 				{
 					"name": "Registrar Usuario Estudiante",
@@ -70,7 +24,10 @@
 								"exec": [
 									"if (pm.response.code === 200) {",
 									"    const responseJson = pm.response.json();",
-									"    pm.environment.set('jwt_token', responseJson.data.token);",
+									"    if (responseJson.success && responseJson.data && responseJson.data.token) {",
+									"        pm.environment.set('jwt_token', responseJson.data.token);",
+									"        console.log('Token guardado:', responseJson.data.token);",
+									"    }",
 									"}"
 								],
 								"type": "text/javascript"
@@ -78,68 +35,56 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "noauth"
-						},
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
+							{ "key": "Content-Type", "value": "application/json" }
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"email\": \"estudiante@utec.edu.pe\",\n    \"password\": \"password123\",\n    \"nombre\": \"Juan Pérez\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{base_url}}/usuarios/registro",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"usuarios",
-								"registro"
-							]
+							"host": [ "{{base_url}}" ],
+							"path": [ "usuarios", "registro" ]
 						}
 					}
 				},
 				{
 					"name": "Registrar Usuario Administrador",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.success && responseJson.data && responseJson.data.token) {",
+									"        pm.environment.set('jwt_token', responseJson.data.token);",
+									"        pm.environment.set('admin_token', responseJson.data.token);",
+									"        console.log('Token de admin guardado:', responseJson.data.token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
-						"auth": {
-							"type": "noauth"
-						},
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
+							{ "key": "Content-Type", "value": "application/json" }
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"email\": \"admin@utec.edu.pe\",\n    \"password\": \"admin123\",\n    \"nombre\": \"Admin UTEC\",\n    \"role\": \"autoridad\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{base_url}}/usuarios/registro",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"usuarios",
-								"registro"
-							]
+							"host": [ "{{base_url}}" ],
+							"path": [ "usuarios", "registro" ]
 						}
 					}
 				},
@@ -152,7 +97,10 @@
 								"exec": [
 									"if (pm.response.code === 200) {",
 									"    const responseJson = pm.response.json();",
-									"    pm.environment.set('jwt_token', responseJson.data.token);",
+									"    if (responseJson.success && responseJson.data && responseJson.data.token) {",
+									"        pm.environment.set('jwt_token', responseJson.data.token);",
+									"        console.log('Login exitoso, token guardado:', responseJson.data.token);",
+									"    }",
 									"}"
 								],
 								"type": "text/javascript"
@@ -160,83 +108,35 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "noauth"
-						},
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
+							{ "key": "Content-Type", "value": "application/json" }
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"email\": \"estudiante@utec.edu.pe\",\n    \"password\": \"password123\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{base_url}}/usuarios/login",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"usuarios",
-								"login"
-							]
+							"host": [ "{{base_url}}" ],
+							"path": [ "usuarios", "login" ]
 						}
 					}
 				},
 				{
-					"name": "Buscar Usuario por ID",
+					"name": "Buscar Usuario por ID (Admin)",
 					"request": {
 						"method": "GET",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
+							{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }
 						],
 						"url": {
-							"raw": "{{base_url}}/usuarios/buscar?userId={{user_id}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"usuarios",
-								"buscar"
-							],
+							"raw": "{{base_url}}/usuarios/buscar?userId=test-user-id",
+							"host": [ "{{base_url}}" ],
+							"path": [ "usuarios", "buscar" ],
 							"query": [
-								{
-									"key": "userId",
-									"value": "{{user_id}}"
-								}
-							]
-						}
-					}
-				},
-				{
-					"name": "Listar Todos los Usuarios (Admin)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/usuarios/listar",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"usuarios",
-								"listar"
+								{ "key": "userId", "value": "test-user-id" }
 							]
 						}
 					}
@@ -255,7 +155,10 @@
 								"exec": [
 									"if (pm.response.code === 200) {",
 									"    const responseJson = pm.response.json();",
-									"    pm.environment.set('codigo_incidente', responseJson.data.codigo_incidente);",
+									"    if (responseJson.success && responseJson.data && responseJson.data.codigo_incidente) {",
+									"        pm.environment.set('codigo_incidente', responseJson.data.codigo_incidente);",
+									"        console.log('Incidente creado:', responseJson.data.codigo_incidente);",
+									"    }",
 									"}"
 								],
 								"type": "text/javascript"
@@ -265,109 +168,18 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"ubicacion\": \"Aula 101 - Edificio A\",\n    \"descripcion\": \"Hay una fuga de agua en el techo del aula\",\n    \"tipo\": \"Fuga de agua\",\n    \"urgencia\": \"alta\",\n    \"imagen\": \"https://ejemplo.com/imagen.jpg\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
+							"raw": "{\n    \"ubicacion\": \"Aula 101 - Edificio A\",\n    \"descripcion\": \"Hay una fuga de agua en el techo del aula que está afectando las clases\",\n    \"tipo\": \"Fuga de agua\",\n    \"lugar\": \"aula\",\n    \"urgencia\": \"alta\",\n    \"imagen\": \"https://ejemplo.com/imagen.jpg\"\n}",
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{base_url}}/incidentes/crear",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"incidentes",
-								"crear"
-							]
-						}
-					}
-				},
-				{
-					"name": "Listar Incidentes Activos",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/incidentes/activos",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"incidentes",
-								"activos"
-							]
-						}
-					}
-				},
-				{
-					"name": "Listar Todos los Incidentes (Admin)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/incidentes/admin",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"incidentes",
-								"admin"
-							]
-						}
-					}
-				},
-				{
-					"name": "Filtrar Incidentes",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/incidentes/filtrar?urgencia=alta&tipo=Fuga de agua",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"incidentes",
-								"filtrar"
-							],
-							"query": [
-								{
-									"key": "urgencia",
-									"value": "alta"
-								},
-								{
-									"key": "tipo",
-									"value": "Fuga de agua"
-								}
-							]
+							"host": [ "{{base_url}}" ],
+							"path": [ "incidentes", "crear" ]
 						}
 					}
 				},
@@ -376,61 +188,35 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
+							{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }
 						],
 						"url": {
 							"raw": "{{base_url}}/incidentes/buscar?codigo_incidente={{codigo_incidente}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"incidentes",
-								"buscar"
-							],
+							"host": [ "{{base_url}}" ],
+							"path": [ "incidentes", "buscar" ],
 							"query": [
-								{
-									"key": "codigo_incidente",
-									"value": "{{codigo_incidente}}"
-								}
+								{ "key": "codigo_incidente", "value": "{{codigo_incidente}}" }
 							]
 						}
 					}
 				},
 				{
-					"name": "Agregar Reporte a Incidente",
+					"name": "Actualizar Estado de Incidente (Admin)",
 					"request": {
-						"method": "POST",
+						"method": "PUT",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"codigo_incidente\": \"{{codigo_incidente}}\",\n    \"detalles\": \"Se ha empeorado la situación, ahora hay charcos en el piso\",\n    \"estado\": \"pendiente\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
+							"raw": "{\n    \"codigo_incidente\": \"{{codigo_incidente}}\",\n    \"estado\": \"en_proceso\"\n}",
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
-							"raw": "{{base_url}}/incidentes/reporte",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"incidentes",
-								"reporte"
-							]
+							"raw": "{{base_url}}/incidentes/estado",
+							"host": [ "{{base_url}}" ],
+							"path": [ "incidentes", "estado" ]
 						}
 					}
 				}
@@ -444,29 +230,15 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
+							{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }
 						],
 						"url": {
 							"raw": "{{base_url}}/historial/listar?page=1&size=10",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"historial",
-								"listar"
-							],
+							"host": [ "{{base_url}}" ],
+							"path": [ "historial", "listar" ],
 							"query": [
-								{
-									"key": "page",
-									"value": "1"
-								},
-								{
-									"key": "size",
-									"value": "10"
-								}
+								{ "key": "page", "value": "1" },
+								{ "key": "size", "value": "10" }
 							]
 						}
 					}
@@ -476,170 +248,14 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
+							{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }
 						],
 						"url": {
 							"raw": "{{base_url}}/historial/incidente?codigo_incidente={{codigo_incidente}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"historial",
-								"incidente"
-							],
+							"host": [ "{{base_url}}" ],
+							"path": [ "historial", "incidente" ],
 							"query": [
-								{
-									"key": "codigo_incidente",
-									"value": "{{codigo_incidente}}"
-								}
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "Administración",
-			"item": [
-				{
-					"name": "Actualizar Estado de Incidente",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"codigo_incidente\": \"{{codigo_incidente}}\",\n    \"estado\": \"en_proceso\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/incidentes/estado",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"incidentes",
-								"estado"
-							]
-						}
-					}
-				},
-				{
-					"name": "Asignar Responsable",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"codigo_incidente\": \"{{codigo_incidente}}\",\n    \"responsableId\": \"{{user_id}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/incidentes/asignar",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"incidentes",
-								"asignar"
-							]
-						}
-					}
-				},
-				{
-					"name": "Reasignar Responsable",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"codigo_incidente\": \"{{codigo_incidente}}\",\n    \"responsableId\": \"nuevo-user-id-uuid\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/incidentes/reasignar",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"incidentes",
-								"reasignar"
-							]
-						}
-					}
-				},
-				{
-					"name": "Resolver Incidente",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"codigo_incidente\": \"{{codigo_incidente}}\",\n    \"estado\": \"resuelto\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/incidentes/estado",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"incidentes",
-								"estado"
+								{ "key": "codigo_incidente", "value": "{{codigo_incidente}}" }
 							]
 						}
 					}
