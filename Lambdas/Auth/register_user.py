@@ -13,12 +13,25 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret-key-2024')
 INSTITUTIONAL_DOMAIN = "utec.edu.pe"
 
 def get_body(event):
-    body = event.get('body', '{}')
-    if isinstance(body, dict):
-        return body
+    """Maneja correctamente el parsing del body desde API Gateway"""
     try:
-        return json.loads(body)
-    except Exception:
+        # API Gateway siempre envía el body como string
+        body = event.get('body', '{}')
+        
+        # Si el body está base64 encoded (cuando es binary)
+        if event.get('isBase64Encoded', False):
+            import base64
+            body = base64.b64decode(body).decode('utf-8')
+            
+        # Parsear el JSON
+        if isinstance(body, str):
+            return json.loads(body)
+        elif isinstance(body, dict):
+            return body
+        else:
+            return {}
+    except Exception as e:
+        print(f"Error parsing body: {str(e)}")
         return {}
 
 def is_institutional_email(email):
@@ -26,8 +39,13 @@ def is_institutional_email(email):
 
 def lambda_handler(event, context):
     try:
+        # Debug: imprimir el evento completo para ver qué llega
+        print("Event received:", json.dumps(event, default=str))
+        
         # 1. Parsear el body
         body = get_body(event)
+        print("Parsed body:", body)
+        
         email = body.get('email')
         password = body.get('password')
         nombre = body.get('nombre')
@@ -35,6 +53,7 @@ def lambda_handler(event, context):
         
         # 2. Validaciones básicas
         if not email or not password or not nombre:
+            print(f"Missing fields - email: {email}, password: {password}, nombre: {nombre}")
             return response(400, "Faltan campos obligatorios")
         
         if role not in ['estudiante', 'autoridad']:
@@ -82,6 +101,8 @@ def lambda_handler(event, context):
     except Exception as e:
         # Log del error para debugging
         print(f"Error en register_user: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return response(500, "Error interno del servidor")
 
 def response(code, body):
