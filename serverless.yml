@@ -13,6 +13,7 @@ provider:
     USERS_TABLE: t_users
     INCIDENTES_TABLE: t_incidentes
     HISTORIAL_TABLE: t_historial
+    WEBSOCKET_TABLE: t_connections
     SNS_TOPIC: !Ref AlertaUTECSNSTopic
     JWT_SECRET: alerta-utec-secret-key-2024
 functions:
@@ -220,6 +221,18 @@ resources:
             AttributeType: S
         KeySchema:
           - AttributeName: codigo_incidente
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        
+     WebsocketTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: t_connections
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
 
