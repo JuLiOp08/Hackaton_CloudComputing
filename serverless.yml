@@ -16,6 +16,9 @@ provider:
     WEBSOCKET_TABLE: t_connections
     SNS_TOPIC: !Ref AlertaUTECSNSTopic
     JWT_SECRET: alerta-utec-secret-key-2024
+
+custom:
+  pythonRequirements: {}
 functions:
   register_user:
     handler: Lambdas/Auth/register_user.lambda_handler
@@ -260,5 +263,3 @@ resources:
         TopicName: AlertaUTEC
         DisplayName: Notificaciones AlertaUTEC
 
-plugins:
-  - serverless-python-requirements
