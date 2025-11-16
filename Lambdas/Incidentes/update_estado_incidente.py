@@ -16,8 +16,11 @@ VALID_STATES = ['pendiente', 'en proceso', 'resuelto']
 
 def lambda_handler(event, context):
     try:
-        if auth["context"]["role"] != "autoridad" or auth["context"]["role"] != "personal_admin":
-            return response(403, "No autorizado - se requiere rol de autorizacion")
+        auth = event["requestContext"]["authorizer"]
+        user_id = auth['userId']
+        
+        if auth["context"]["role"] not in ["autoridad", "personal_admin"]:
+            return response(403, "No autorizado - se requiere rol de autoridad o personal admin")
         
         body = json.loads(event.get('body', '{}'))
         codigo_incidente = body.get('codigo_incidente')
@@ -39,43 +42,47 @@ def lambda_handler(event, context):
         )
         evento_id = str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
+        
         historial = {
             'codigo_incidente': codigo_incidente,
             'uuid_evento': evento_id,
             'tiempo': now,
-            'encargado': claims['userId'],
+            'encargado': user_id,
             'estado': nuevo_estado,
             'detalles': f'Estado actualizado a {nuevo_estado}'
         }
         dynamodb.Table(HISTORIAL_TABLE).put_item(Item=historial)
         
-    except Exception as e:
-        return response(500, str(e))
-
-    try:
-        lambda_client = boto3.client('lambda')
+        sns.publish(TopicArn=SNS_TOPIC, Message=json.dumps({
+            'evento': 'estado_actualizado',
+            'codigo_incidente': codigo_incidente,
+            'nuevo_estado': nuevo_estado,
+            'reportanteId': incidente['reportanteId'],
+            'fecha': now
+        }))
         
-        lambda_client.invoke(
-            FunctionName='notify_handler',
-            InvocationType='Event',
-            Payload=json.dumps({
-                'action': 'status_changed',
-                'incident': {
-                    'codigo_incidente': codigo_incidente,
-                    'uuid_evento': evento_id,
-                    'tiempo': now,
-                    'encargado': claims['userId'],
-                    'estado': nuevo_estado,
-                    'detalles': f'Estado actualizado a {nuevo_estado}'
-                },
-                'timestamp': datetime.utcnow().isoformat()
-            })
-        )
+        try:
+            lambda_client = boto3.client('lambda')
+            lambda_client.invoke(
+                FunctionName='alerta-utec-dev-notifyHandler',
+                InvocationType='Event',
+                Payload=json.dumps({
+                    'action': 'status_changed',
+                    'incident': {
+                        'codigo_incidente': codigo_incidente,
+                        'estado': nuevo_estado,
+                        'reportanteId': incidente['reportanteId'],
+                        'updatedBy': user_id
+                    },
+                    'timestamp': now
+                })
+            )
+        except Exception as e:
+            print(f"Error invocando notificación: {str(e)}")
+            
+        return response(200, {'codigo_incidente': codigo_incidente, 'estado': nuevo_estado})
     except Exception as e:
-        print(f"Error invocando notificación: {str(e)}")
         return response(500, str(e))
-
-    return response(200, {'codigo_incidente': codigo_incidente, 'estado': nuevo_estado})
 
 def response(code, body):
     return {
