@@ -4,6 +4,8 @@ import uuid
 import jwt
 import os
 import time
+from datetime import datetime
+
 def get_body(event):
     body = event.get('body', '{}')
     if isinstance(body, dict):
@@ -12,11 +14,6 @@ def get_body(event):
         return json.loads(body)
     except Exception:
         return {}
-
-from datetime import datetime
-    try:
-        auth = event["requestContext"]["authorizer"]
-        body = get_body(event)
 
 dynamodb = boto3.resource('dynamodb')
 sns = boto3.client('sns')
