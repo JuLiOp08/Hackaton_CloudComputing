@@ -77,7 +77,7 @@ def lambda_handler(event, context):
         lambda_client = boto3.client('lambda')
         
         lambda_client.invoke(
-            FunctionName='alerta-utec-dev-notifyHandler',
+            FunctionName='notify_handler',
             InvocationType='Event',
             Payload=json.dumps({
                 'action': 'new_incident',
