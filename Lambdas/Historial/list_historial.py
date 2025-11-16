@@ -7,21 +7,9 @@ dynamodb = boto3.resource('dynamodb')
 HISTORIAL_TABLE = os.environ.get('HISTORIAL_TABLE')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alerta-utec-secret')
 
-def validate_token(event):
-    auth = event['headers'].get('Authorization')
-    if not auth or not auth.startswith('Bearer '):
-        return None
-    token = auth.split(' ')[1]
-    try:
-        return jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-    except Exception:
-        return None
-
 def lambda_handler(event, context):
     try:
-        claims = validate_token(event)
-        if not claims:
-            return response(401, "Token inválido")
+        
         params = event.get('queryStringParameters', {}) or {}
         table = dynamodb.Table(HISTORIAL_TABLE)
         scan = table.scan()
