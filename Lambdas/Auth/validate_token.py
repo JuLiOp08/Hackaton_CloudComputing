@@ -6,7 +6,8 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "alerta-utec-secret-key-2024")
 
 def lambda_handler(event, context):
     print("Authorizer event:", json.dumps(event))
-    
+    auth_token = event.get('authorizationToken', '')
+
     try:
         if not auth_token:
             print("No authorizationToken provided")
